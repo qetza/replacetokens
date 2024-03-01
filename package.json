@@ -1,0 +1,52 @@
+{
+  "name": "@qetza/replacetokens",
+  "version": "1.1.0",
+  "description": "replace tokens in files",
+  "author": "Guillaume ROUCHON",
+  "license": "MIT",
+  "keywords": [
+    "replace",
+    "tokens",
+    "substitution",
+    "variables"
+  ],
+  "homepage": "https://github.com/qetza/replacetokens#readme",
+  "bugs": {
+    "url": "https://github.com/qetza/replacetokens/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qetza/replacetokens"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://www.paypal.com/donate/?hosted_button_id=CCEAVYA8DUFD8"
+  },
+  "main": "dist/index.js",
+  "bin": {
+    "replacetokens": "dist/bin/index.js"
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "format": "prettier --write **/*.ts",
+    "format-check": "prettier --check **/*.ts"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^16.11.39",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.5",
+    "ts-jest": "^29.1.2",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.2",
+    "iconv-lite": "^0.6.3",
+    "jschardet": "^3.0.0",
+    "yargs": "^17.7.2"
+  }
+}

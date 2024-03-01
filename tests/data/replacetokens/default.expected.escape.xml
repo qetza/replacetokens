@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<settings>
+  <var1>&quot;var&apos;\1
+	&amp;&lt;value&gt;</var1>
+  <var2>var2_value</var2>
+</settings>

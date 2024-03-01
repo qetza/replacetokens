@@ -1,0 +1,4 @@
+{
+  "var1": "#{vars:0:value}#",
+  "var2": "#{vars:1:value}#"
+}

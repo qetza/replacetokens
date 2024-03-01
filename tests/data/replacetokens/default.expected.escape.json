@@ -1,0 +1,4 @@
+{
+  "var1": "\"var'\\1\n\r\t&<value>\b\f",
+  "var2": "var2_value"
+}
