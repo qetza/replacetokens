@@ -1,6 +1,6 @@
 {
   "name": "@qetza/replacetokens",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "replace tokens in files",
   "author": "Guillaume ROUCHON",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "build": "tsc",
     "test": "jest",
     "format": "prettier --write **/*.ts",
-    "format-check": "prettier --check **/*.ts"
+    "format:check": "prettier --check **/*.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

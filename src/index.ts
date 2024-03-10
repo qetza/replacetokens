@@ -66,26 +66,23 @@ export class Counter {
   transforms: number = 0;
 }
 
-export function merge(...objects: { [key: string]: any }[]): { [key: string]: any } {
+export function flattenAndMerge(separator: string, ...objects: { [key: string]: any }[]): { [key: string]: any } {
   return objects.reduce((result, current) => {
-    if (Array.isArray(current)) return current;
-
-    for (const key of Object.keys(current)) {
-      if (!result[key]) {
-        // key doesn't already exists, copy current
-        result[key] =
-          current[key] && typeof current[key] === 'object' ? JSON.parse(JSON.stringify(current[key])) : current[key];
-      } else if (typeof result[key] === 'object' && typeof current[key] === 'object') {
-        // merge object values
-        result[key] = merge(result[key], current[key]);
-      } else {
-        // update scalar value
-        result[key] = current[key];
-      }
-    }
-
-    return result;
+    return { ...result, ...flatten(current, separator) };
   }, {});
+}
+function flatten(object: Object, separator: string, parentKey?: string): { [key: string]: string } {
+  let result = {};
+
+  Object.keys(object).forEach((key: string) => {
+    const value = object[key];
+    const flattenKey = parentKey ? `${parentKey}${separator}${key}` : key;
+
+    if (value && typeof value === 'object') result = { ...result, ...flatten(value, separator, flattenKey) };
+    else result[flattenKey] = value?.toString() ?? '';
+  });
+
+  return result;
 }
 
 export async function readTextFile(
@@ -260,19 +257,7 @@ function loadVariables(variables: { [key: string]: any }, options: Options): { [
 
   try {
     // parse, flatten and stringify json variables
-    const data = (function flatten(obj: Object, parentKey?: string): { [key: string]: string } {
-      let result = {};
-
-      Object.keys(obj).forEach((key: string) => {
-        const value = obj[key];
-        const flattenKey = parentKey ? `${parentKey}${options.separator}${key}` : key;
-
-        if (value && typeof value === 'object') result = { ...result, ...flatten(value, flattenKey) };
-        else result[flattenKey] = value?.toString() ?? '';
-      });
-
-      return result;
-    })(variables ?? {});
+    const data = flatten(variables ?? {}, options.separator!);
 
     // log variables
     let count = 0;

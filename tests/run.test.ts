@@ -48,7 +48,9 @@ describe('run', () => {
 
     // assert
     expect(exitSpy).toHaveBeenCalledWith(0);
-    expect(consoleSpies.log).toHaveBeenCalledWith('1.1.0');
+    expect(consoleSpies.log).toHaveBeenCalledWith(
+      JSON.parse(await fs.readFile(path.join(__dirname, '../package.json'), { encoding: 'utf-8' })).version
+    );
   });
 
   it('mandatory arguments', async () => {
@@ -115,7 +117,7 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       ['file1'],
-      { var1: 'value1', var2: { sub2: ['value2'] } },
+      { var1: 'value1', 'var2.sub2.0': 'value2' },
       expect.anything()
     );
   });
@@ -125,7 +127,6 @@ describe('run', () => {
     spyOnConsole();
     const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
     const varsPath = path.join(data, 'vars.json');
-    const vars = JSON.parse(await fs.readFile(varsPath, { encoding: 'utf8', flag: 'r' }));
 
     jest.replaceProperty(process, 'argv', ['node', 'index.js', '--sources', 'file1', '--variables', `@${varsPath}`]);
 
@@ -133,7 +134,11 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], vars, expect.anything());
+    expect(replaceTokensSpy).toHaveBeenCalledWith(
+      ['file1'],
+      { var1: 'value1', 'var2.sub2.0': 'value2' },
+      expect.anything()
+    );
   });
 
   it('env variables', async () => {
@@ -158,7 +163,11 @@ describe('run', () => {
       await run();
 
       // assert
-      expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], vars, expect.anything());
+      expect(replaceTokensSpy).toHaveBeenCalledWith(
+        ['file1'],
+        { var1: 'value1', 'var2.sub2.0': 'value2' },
+        expect.anything()
+      );
     } finally {
       delete process.env.REPLACETOKENS_TESTS_VARS;
     }
@@ -175,7 +184,12 @@ describe('run', () => {
       jest.replaceProperty(
         process,
         'argv',
-        argv('{ "var1": "args" }', `@${path.join(data, 'var.json')}`, '$REPLACETOKENS_TESTS_VARS')
+        argv(
+          '{ "var1": "args" }',
+          `@${path.join(data, 'var.json')}`,
+          '$REPLACETOKENS_TESTS_VARS',
+          '["array", { "var4": "array" }]'
+        )
       );
 
       // act
@@ -184,7 +198,7 @@ describe('run', () => {
       // assert
       expect(replaceTokensSpy).toHaveBeenCalledWith(
         ['file1'],
-        { var1: 'args', var2: 'file', var3: 'env' },
+        { var1: 'args', var2: 'file', var3: 'env', '0': 'array', '1.var4': 'array' },
         expect.anything()
       );
     } finally {
