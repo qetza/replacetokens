@@ -1,12 +1,12 @@
-import { merge } from '../src';
+import { flattenAndMerge } from '../src';
 
-describe('merge', () => {
+describe('flattenAndMerge', () => {
   it('single object', () => {
     // arrange
     const source = { string: 'hello' };
 
     // act
-    const result = merge(source);
+    const result = flattenAndMerge('.', source);
 
     // assert
     expect(result).not.toBe(source);
@@ -19,10 +19,10 @@ describe('merge', () => {
     const source2 = { msg: 'hello world!', count: 2 };
 
     // act
-    const result = merge(source1, source2);
+    const result = flattenAndMerge('.', source1, source2);
 
     // assert
-    expect(result).toEqual({ msg: 'hello world!', private: true, count: 2 });
+    expect(result).toEqual({ msg: 'hello world!', private: 'true', count: '2' });
   });
 
   it('objects with array', async () => {
@@ -31,10 +31,15 @@ describe('merge', () => {
     const source2 = { msgs: ['hello', 'world!'], count: 2 };
 
     // act
-    const result = merge(source1, source2);
+    const result = flattenAndMerge('.', source1, source2);
 
     // assert
-    expect(result).toEqual({ msgs: ['hello', 'world!'], private: true, count: 2 });
+    expect(result).toEqual({
+      'msgs.0': 'hello',
+      'msgs.1': 'world!',
+      private: 'true',
+      count: '2'
+    });
   });
 
   it('complex objects', async () => {
@@ -49,16 +54,30 @@ describe('merge', () => {
       obj: { scalar2: false, obj: { scalar: '1.3', array: ['hello world!'] } },
       count: 2
     };
+    const source3 = [
+      'a',
+      {
+        scalar: 2
+      }
+    ];
 
     // act
-    const result = merge(source1, source2);
+    const result = flattenAndMerge('.', source1, source2, source3);
 
     // assert
     expect(result).toEqual({
       scalar: 'string',
-      array: [{ scalar: 'hello' }],
-      obj: { scalar: true, scalar2: false, obj: { scalar: '1.3', array: ['hello world!'], scalar2: 'a' } },
-      count: 2
+      'array.0.scalar': 'hello',
+      'array.1.scalar': 'world!',
+      'obj.scalar': 'true',
+      'obj.scalar2': 'false',
+      'obj.obj.scalar': '1.3',
+      'obj.obj.array.0': 'hello world!',
+      'obj.obj.array.1.value': 'world!',
+      'obj.obj.scalar2': 'a',
+      count: '2',
+      '0': 'a',
+      '1.scalar': '2'
     });
   });
 });
