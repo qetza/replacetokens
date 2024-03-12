@@ -4,10 +4,15 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 
 const data = path.join(__dirname, 'data/run');
+let replaceTokensSpy: jest.SpiedFunction<typeof rt.replaceTokens>;
 
 describe('run', () => {
   beforeEach(() => {
-    jest.resetModules();
+    jest.clearAllMocks();
+
+    replaceTokensSpy = jest
+      .spyOn(rt, 'replaceTokens')
+      .mockResolvedValue({ defaults: 1, files: 2, replaced: 3, tokens: 3, transforms: 5 });
   });
 
   afterEach(() => {
@@ -74,10 +79,24 @@ describe('run', () => {
     expect(consoleSpies.error).toHaveBeenCalledWith('Missing required arguments: sources, variables');
   });
 
+  it('output', async () => {
+    // arrange
+    const consoleSpies = spyOnConsole();
+
+    jest.replaceProperty(process, 'argv', argv());
+
+    // act
+    await run();
+
+    // assert
+    expect(consoleSpies.log).toHaveBeenCalledWith(
+      JSON.stringify({ defaults: 1, files: 2, replaced: 3, tokens: 3, transforms: 5 })
+    );
+  });
+
   it('sources', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', [
       'node',
@@ -99,7 +118,6 @@ describe('run', () => {
   it('argument variables', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', [
       'node',
@@ -117,7 +135,7 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       ['file1'],
-      { var1: 'value1', 'var2.sub2.0': 'value2' },
+      { VAR1: 'value1', 'VAR2.SUB2.0': 'value2' },
       expect.anything()
     );
   });
@@ -125,7 +143,6 @@ describe('run', () => {
   it('file variables', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
     const varsPath = path.join(data, 'vars.json');
 
     jest.replaceProperty(process, 'argv', ['node', 'index.js', '--sources', 'file1', '--variables', `@${varsPath}`]);
@@ -136,7 +153,7 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       ['file1'],
-      { var1: 'value1', 'var2.sub2.0': 'value2' },
+      { VAR1: 'value1', 'VAR2.SUB2.0': 'value2' },
       expect.anything()
     );
   });
@@ -144,7 +161,6 @@ describe('run', () => {
   it('env variables', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
     const vars = { var1: 'value1', var2: { sub2: ['value2'] } };
 
     process.env.REPLACETOKENS_TESTS_VARS = JSON.stringify(vars);
@@ -165,7 +181,7 @@ describe('run', () => {
       // assert
       expect(replaceTokensSpy).toHaveBeenCalledWith(
         ['file1'],
-        { var1: 'value1', 'var2.sub2.0': 'value2' },
+        { VAR1: 'value1', 'VAR2.SUB2.0': 'value2' },
         expect.anything()
       );
     } finally {
@@ -176,7 +192,6 @@ describe('run', () => {
   it('merge variables', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     process.env.REPLACETOKENS_TESTS_VARS = '{ "var3": "env" }';
 
@@ -198,7 +213,7 @@ describe('run', () => {
       // assert
       expect(replaceTokensSpy).toHaveBeenCalledWith(
         ['file1'],
-        { var1: 'args', var2: 'file', var3: 'env', '0': 'array', '1.var4': 'array' },
+        { VAR1: 'args', VAR2: 'file', VAR3: 'env', '0': 'array', '1.VAR4': 'array' },
         expect.anything()
       );
     } finally {
@@ -463,7 +478,6 @@ describe('run', () => {
   it('root', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--root', 'root'));
 
@@ -481,7 +495,6 @@ describe('run', () => {
   it('encoding', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--encoding', 'encoding'));
 
@@ -499,7 +512,6 @@ describe('run', () => {
   it('token-pattern', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--token-pattern', 'octopus'));
 
@@ -517,7 +529,6 @@ describe('run', () => {
   it('token-prefix', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--token-prefix', '[['));
 
@@ -535,7 +546,6 @@ describe('run', () => {
   it('token-suffix', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--token-suffix', ']]'));
 
@@ -553,7 +563,6 @@ describe('run', () => {
   it('missing-var-action', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--missing-var-action', 'keep'));
 
@@ -571,7 +580,6 @@ describe('run', () => {
   it('missing-var-default', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--missing-var-action', 'replace', '--missing-var-default', 'default'));
 
@@ -589,7 +597,6 @@ describe('run', () => {
   it('missing-var-log', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--missing-var-log', 'error'));
 
@@ -607,7 +614,6 @@ describe('run', () => {
   it('recursive', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--recursive'));
 
@@ -625,7 +631,6 @@ describe('run', () => {
   it('add-bom', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--add-bom'));
 
@@ -643,7 +648,6 @@ describe('run', () => {
   it('escape', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--escape', 'xml'));
 
@@ -661,7 +665,6 @@ describe('run', () => {
   it('escape-char', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--escape-char', '/'));
 
@@ -679,7 +682,6 @@ describe('run', () => {
   it('chars-to-escape', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--chars-to-escape', 'abcd'));
 
@@ -697,7 +699,6 @@ describe('run', () => {
   it('separator', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--separator', ':'));
 
@@ -715,7 +716,6 @@ describe('run', () => {
   it('transforms', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--transforms'));
 
@@ -733,7 +733,6 @@ describe('run', () => {
   it('transforms-prefix', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--transforms-prefix', '['));
 
@@ -751,7 +750,6 @@ describe('run', () => {
   it('transforms-suffix', async () => {
     // arrange
     spyOnConsole();
-    const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation();
 
     jest.replaceProperty(process, 'argv', argv('--transforms-suffix', ']'));
 
