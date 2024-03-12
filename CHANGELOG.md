@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.3.0
+- Make variable names case-insensitive
+
 ## v1.2.0
 - Replace `merge` with `flattenAndMerge` to flatten objects and merge
 

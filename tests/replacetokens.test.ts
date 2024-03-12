@@ -214,6 +214,47 @@ describe('replaceTokens', () => {
     });
   });
 
+  describe('variables', () => {
+    it('logs', async () => {
+      // arrange
+      const input = await copyData('default.json', 'default1.json');
+      const consoleSpies = spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), {
+        var1: 'var1_value',
+        var2: 'var2_value',
+        VAR3: ['var3_value0', 'var3_value1']
+      });
+
+      // assert
+      expect(consoleSpies.group).toHaveBeenCalledWith('loading variables');
+      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'var1'");
+      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'var2'");
+      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'VAR3.0'");
+      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'VAR3.1'");
+      expect(consoleSpies.info).toHaveBeenCalledWith('4 variables loaded');
+      expect(consoleSpies.groupEnd).toHaveBeenCalled();
+    });
+
+    it('case insensitive', async () => {
+      // arrange
+      const input = await copyData('default.separator.json', 'default1.json');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(
+        normalizeSources(input),
+        { VARS: [{ value: 'var1_value' }, { VALUE: 'var2_value' }] },
+        { separator: ':' }
+      );
+
+      // assert
+      expectCountersToEqual(result, 0, 1, 2, 2, 0);
+      await expectFilesToEqual(input, 'default.expected.json');
+    });
+  });
+
   describe('token', () => {
     it('default pattern', async () => {
       // arrange
@@ -622,7 +663,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1#{var3}#', var2: 'var2_value', var3: '_#{var4}#', var4: 'value' },
+        { VAR1: 'var1#{var3}#', var2: 'var2_value', var3: '_#{var4}#', VAR4: 'value' },
         { recursive: true }
       );
 
@@ -640,7 +681,7 @@ describe('replaceTokens', () => {
       await expect(
         replaceTokens(
           normalizeSources(input),
-          { var1: 'var1#{var2}#', var2: '_#{var1}#', var3: 'value' },
+          { VAR1: 'var1#{var2}#', var2: '_#{var1}#', var3: 'value' },
           { recursive: true }
         )
       ).rejects.toThrow("found cycle with token 'var1'");

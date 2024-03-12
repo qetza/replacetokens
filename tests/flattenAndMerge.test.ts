@@ -10,7 +10,7 @@ describe('flattenAndMerge', () => {
 
     // assert
     expect(result).not.toBe(source);
-    expect(result).toEqual(source);
+    expect(result).toEqual({ STRING: 'hello' });
   });
 
   it('multiple objects', async () => {
@@ -22,7 +22,7 @@ describe('flattenAndMerge', () => {
     const result = flattenAndMerge('.', source1, source2);
 
     // assert
-    expect(result).toEqual({ msg: 'hello world!', private: 'true', count: '2' });
+    expect(result).toEqual({ MSG: 'hello world!', PRIVATE: 'true', COUNT: '2' });
   });
 
   it('objects with array', async () => {
@@ -35,10 +35,10 @@ describe('flattenAndMerge', () => {
 
     // assert
     expect(result).toEqual({
-      'msgs.0': 'hello',
-      'msgs.1': 'world!',
-      private: 'true',
-      count: '2'
+      'MSGS.0': 'hello',
+      'MSGS.1': 'world!',
+      PRIVATE: 'true',
+      COUNT: '2'
     });
   });
 
@@ -50,8 +50,8 @@ describe('flattenAndMerge', () => {
       obj: { scalar: true, obj: { scalar: 1.2, array: ['hello', { value: 'world!' }], scalar2: 'a' } }
     };
     const source2 = {
-      array: [{ scalar: 'hello' }],
-      obj: { scalar2: false, obj: { scalar: '1.3', array: ['hello world!'] } },
+      ARRAY: [{ scalar: 'hello' }],
+      obj: { scalar2: false, obj: { SCALAR: '1.3', array: ['hello world!'] } },
       count: 2
     };
     const source3 = [
@@ -66,18 +66,18 @@ describe('flattenAndMerge', () => {
 
     // assert
     expect(result).toEqual({
-      scalar: 'string',
-      'array.0.scalar': 'hello',
-      'array.1.scalar': 'world!',
-      'obj.scalar': 'true',
-      'obj.scalar2': 'false',
-      'obj.obj.scalar': '1.3',
-      'obj.obj.array.0': 'hello world!',
-      'obj.obj.array.1.value': 'world!',
-      'obj.obj.scalar2': 'a',
-      count: '2',
+      SCALAR: 'string',
+      'ARRAY.0.SCALAR': 'hello',
+      'ARRAY.1.SCALAR': 'world!',
+      'OBJ.SCALAR': 'true',
+      'OBJ.SCALAR2': 'false',
+      'OBJ.OBJ.SCALAR': '1.3',
+      'OBJ.OBJ.ARRAY.0': 'hello world!',
+      'OBJ.OBJ.ARRAY.1.VALUE': 'world!',
+      'OBJ.OBJ.SCALAR2': 'a',
+      COUNT: '2',
       '0': 'a',
-      '1.scalar': '2'
+      '1.SCALAR': '2'
     });
   });
 });

@@ -55,7 +55,7 @@ Example: `**/*.json; !local/ => out/*.json` will match all files ending with `.j
 
 `--variables <list>`
 
-A list of JSON encoded key/values.
+A list of JSON encoded key/values (keys are **case-insensitive**).
 
 If an entry starts with:
 - `@`: the value will be interpreted as a path to a JSON file

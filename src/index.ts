@@ -66,21 +66,29 @@ export class Counter {
   transforms: number = 0;
 }
 
-export function flattenAndMerge(separator: string, ...objects: { [key: string]: any }[]): { [key: string]: any } {
+export function flattenAndMerge(separator: string, ...objects: { [key: string]: any }[]): { [key: string]: string } {
   return objects.reduce((result, current) => {
-    return { ...result, ...flatten(current, separator) };
+    const values = {};
+    for (const [key, value] of Object.entries(flatten(current, separator))) {
+      values[key] = value.value;
+    }
+
+    return { ...result, ...values };
   }, {});
 }
-function flatten(object: Object, separator: string, parentKey?: string): { [key: string]: string } {
+function flatten(
+  object: Object,
+  separator: string,
+  parentKey?: string
+): { [key: string]: { name: string; value: string } } {
   let result = {};
 
-  Object.keys(object).forEach((key: string) => {
-    const value = object[key];
-    const flattenKey = parentKey ? `${parentKey}${separator}${key}` : key;
+  for (const [key, value] of Object.entries(object)) {
+    let flattenKey = parentKey ? `${parentKey}${separator}${key}` : key;
 
     if (value && typeof value === 'object') result = { ...result, ...flatten(value, separator, flattenKey) };
-    else result[flattenKey] = value?.toString() ?? '';
-  });
+    else result[flattenKey.toUpperCase()] = { name: flattenKey, value: value?.toString() ?? '' };
+  }
 
   return result;
 }
@@ -256,19 +264,21 @@ function loadVariables(variables: { [key: string]: any }, options: Options): { [
   console.group('loading variables');
 
   try {
-    // parse, flatten and stringify json variables
+    // flatten with uppercase and stringify json variables
     const data = flatten(variables ?? {}, options.separator!);
 
-    // log variables
-    let count = 0;
-    for (const key of Object.keys(data)) {
-      ++count;
-      console.debug(`loaded '${key}'`);
+    // get variables with case-insensitive key and value
+    const vars = {};
+    for (const [key, value] of Object.entries(data)) {
+      vars[key] = value.value;
+
+      console.debug(`loaded '${value.name}'`);
     }
 
+    const count = Object.keys(vars).length;
     console.info(`${count} variable${count > 1 ? 's' : ''} loaded`);
 
-    return data;
+    return vars;
   } finally {
     console.groupEnd();
   }
@@ -461,10 +471,11 @@ function replaceTokensInString(
     }
 
     // check recursion
-    if (options.recursive && names.includes(name)) throw new Error(`found cycle with token '${name}'`);
+    const key = name.toUpperCase();
+    if (options.recursive && names.includes(key)) throw new Error(`found cycle with token '${name}'`);
 
     // replace token
-    let value: string = variables[name];
+    let value: string = variables[key];
 
     if (value === undefined) {
       // variable not found
@@ -515,7 +526,7 @@ function replaceTokensInString(
           transformRegex,
           customEscapeRegex,
           options,
-          names.concat(name)
+          names.concat(key)
         );
         value = result.content;
 
