@@ -45,7 +45,7 @@ replacetokens --sources
 A list of files to replace tokens in.
 
 Each entry supports:
-- multiple globbing patterns separated by a semi-colon (`;`) using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax (you **must always** use forward slash (`/`) as a directory separator)
+- multiple glob patterns separated by a semi-colon (`;`) using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax (you **must always** use forward slash (`/`) as a directory separator)
 - outputing the result in another file adding the output path after an arrow (`=>`)
 - wildcard replacement in the output file name using an asterix (`*`) in the input and output file names
 
@@ -58,10 +58,15 @@ Example: `**/*.json; !local/ => out/*.json` will match all files ending with `.j
 A list of JSON encoded key/values (keys are **case-insensitive**).
 
 If an entry starts with:
-- `@`: the value will be interpreted as a path to a JSON file
-- `$`: the value will be interpreted as an environment variable name containing JSON encoded key/value pairs
+- `@`: value is parsed as a multiple glob patterns separated by a semi-colon (';') using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax to JSON files
+- `$`: value is parsed as an environment variable name containing JSON encoded key/value pairs
 
 Multiple entries are merged into a single list of key/value pairs.
+
+Example: `'@**/*.json;!!vars.local.json' '$VARS' '{ "var1": "inline", "var2": "inline" }'` will:
+- read and parse all files with `.json` extension except `vars.local.json`
+- read and parse the environment variable `VARS`
+- parse the inline key/values `{ "var": "inline", "var2": "inline" } }`
 
 #### Optional parameters
 `--add-bom`
@@ -136,7 +141,7 @@ Example: `#{message}#` with variables `{ "message": "hello #{name}#!", "name": "
 
 `--root <string>`
 
-The root path to use for relative paths in _sources_. Default is the current working directory.
+The root path to use when reading files with relative paths in _sources_ or _variables_. Default is the current working directory.
 
 `--separator <string>`
 

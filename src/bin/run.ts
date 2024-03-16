@@ -1,5 +1,4 @@
 import * as rt from '../index';
-import path from 'path';
 import yargs from 'yargs';
 
 enum LogLevels {
@@ -14,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.3.0')
+    .version('1.4.0')
     .usage('$0 [args]')
     .help()
     .options({
@@ -22,7 +21,7 @@ export async function run() {
         type: 'string',
         array: true,
         demandOption: true,
-        description: 'semi-colon separated globbing (fast-glob syntax) for input files'
+        description: 'semi-colon separated glob patterns (fast-glob syntax) for input files'
       },
       variables: {
         type: 'string',
@@ -189,7 +188,12 @@ export async function run() {
 
   try {
     // replace tokens
-    const result = await rt.replaceTokens(argv.sources, await parseVariables(argv.variables, argv.separator), {
+    const variables = await rt.parseVariables(argv.variables, {
+      separator: argv.separator,
+      normalizeWin32: false,
+      root: argv.root
+    });
+    const result = await rt.replaceTokens(argv.sources, variables, {
       root: argv.root,
       encoding: argv.encoding,
       token: {
@@ -230,34 +234,4 @@ export async function run() {
     console.group = _group;
     console.groupEnd = _groupEnd;
   }
-}
-
-async function parseVariables(variables: string[], separator: string): Promise<{ [key: string]: any }> {
-  variables = variables || ['{}'];
-
-  // load all inputs
-  let load = async (v: string): Promise<string> => {
-    if (v[0] === '@') {
-      // load from file
-      console.debug(`loading variables from file '${path.resolve(v.substring(1))}'`);
-
-      return (await rt.readTextFile(v.substring(1))).content || '{}';
-    } else if (v[0] === '$') {
-      // load from environment variable
-      console.debug(`loading variables from environment '${v.substring(1)}'`);
-
-      return process.env[v.substring(1)] || '{}';
-    }
-
-    // return given variables
-    return v;
-  };
-
-  // merge inputs
-  const vars: { [key: string]: any }[] = [];
-  for (const v of variables) {
-    vars.push(JSON.parse(await load(v)));
-  }
-
-  return rt.flattenAndMerge(separator, ...vars);
 }

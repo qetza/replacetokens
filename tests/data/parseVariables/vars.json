@@ -1,0 +1,6 @@
+{
+  "var1": "value1",
+  "var2": {
+    "sub2": ["value2"]
+  }
+}

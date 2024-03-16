@@ -143,7 +143,7 @@ describe('run', () => {
   it('file variables', async () => {
     // arrange
     spyOnConsole();
-    const varsPath = path.join(data, 'vars.json');
+    const varsPath = path.join(data, 'vars.json').replace(/\\/g, '/');
 
     jest.replaceProperty(process, 'argv', ['node', 'index.js', '--sources', 'file1', '--variables', `@${varsPath}`]);
 
@@ -201,7 +201,7 @@ describe('run', () => {
         'argv',
         argv(
           '{ "var1": "args" }',
-          `@${path.join(data, 'var.json')}`,
+          `@${path.join(data, 'var.json').replace(/\\/g, '/')}`,
           '$REPLACETOKENS_TESTS_VARS',
           '["array", { "var4": "array" }]'
         )

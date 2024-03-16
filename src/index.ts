@@ -66,8 +66,72 @@ export class Counter {
   transforms: number = 0;
 }
 
-export function flattenAndMerge(separator: string, ...objects: { [key: string]: any }[]): { [key: string]: string } {
-  return objects.reduce((result, current) => {
+export interface ParseVariablesOptions {
+  separator?: string;
+  normalizeWin32?: boolean;
+  root?: string;
+  dot?: boolean;
+}
+export async function parseVariables(
+  variables: string[],
+  options?: ParseVariablesOptions
+): Promise<{ [key: string]: string }> {
+  variables = variables || ['{}'];
+
+  // load all inputs
+  let load = async (v: string): Promise<any[]> => {
+    if (v[0] === '@') {
+      // load from file
+      return await loadVariablesFromFile(v.substring(1), options);
+    } else if (v[0] === '$') {
+      // load from environment variable
+      console.debug(`loading variables from env '${v.substring(1)}'`);
+
+      return [JSON.parse(process.env[v.substring(1)] || '{}')];
+    }
+
+    // return given variables
+    return [JSON.parse(v)];
+  };
+
+  // merge inputs
+  const vars: any[] = [];
+  for (const v of variables) {
+    vars.push(...(await load(v)));
+  }
+
+  return flattenAndMerge(options?.separator || Defaults.Separator, ...vars);
+}
+
+async function loadVariablesFromFile(name: string, options?: ParseVariablesOptions): Promise<any[]> {
+  if (os.platform() === 'win32' && options?.normalizeWin32) {
+    name = name.replace(/\\/g, '/');
+  }
+
+  const files = await fg.glob(
+    name.split(';').map(v => v.trim()),
+    {
+      absolute: true,
+      cwd: options?.root,
+      dot: options?.dot,
+      onlyFiles: true,
+      unique: true
+    }
+  );
+
+  const vars: any[] = [];
+  for (const file of files) {
+    console.debug(`loading variables from file '${normalizePath(file)}'`);
+
+    const content = (await readTextFile(file)).content;
+    vars.push(JSON.parse(content));
+  }
+
+  return vars;
+}
+
+function flattenAndMerge(separator: string, ...objects: any[]): { [key: string]: string } {
+  return objects.reduce<{ [key: string]: string }>((result, current) => {
     const values = {};
     for (const [key, value] of Object.entries(flatten(current, separator))) {
       values[key] = value.value;
