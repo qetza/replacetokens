@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.0
+- Add support for glob pattern in variable file paths ([#4](https://github.com/qetza/replacetokens/issues/4)).
+- Add `parseVariables` function to parse string variables (load, flatten & merge).
+- Removed `flattenAndMerge` function (use `parseVariables` instead).
+
 ## v1.3.0
 - Make variable names case-insensitive
 
