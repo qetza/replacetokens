@@ -58,13 +58,13 @@ Example: `**/*.json; !local/ => out/*.json` will match all files ending with `.j
 A list of JSON encoded key/values (keys are **case-insensitive**).
 
 If an entry starts with:
-- `@`: value is parsed as a multiple glob patterns separated by a semi-colon (';') using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax to JSON files
+- `@`: value is parsed as a multiple glob patterns separated by a semi-colon (';') using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax to JSON or YAML files
 - `$`: value is parsed as an environment variable name containing JSON encoded key/value pairs
 
 Multiple entries are merged into a single list of key/value pairs.
 
-Example: `'@**/*.json;!!vars.local.json' '$VARS' '{ "var1": "inline", "var2": "inline" }'` will:
-- read and parse all files with `.json` extension except `vars.local.json`
+Example: `'@**/*.(json|yaml);!vars.local.json' '$VARS' '{ "var1": "inline", "var2": "inline" }'` will:
+- read and parse all files with `.json` or `.yaml` extension except `vars.local.json`
 - read and parse the environment variable `VARS`
 - parse the inline key/values `{ "var": "inline", "var2": "inline" } }`
 

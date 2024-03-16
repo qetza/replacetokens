@@ -38,13 +38,23 @@ describe('parseVariables', () => {
 
   it('file: glob', async () => {
     // act
-    const result = await parseVariables(['@**/*.json'], { root: data });
+    const result = await parseVariables(['@**/*.(json|yml|yaml)'], { root: data });
 
     // assert
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.json')}'`);
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.json')}'`);
+    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.yml')}'`);
+    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.yaml')}'`);
 
-    expect(result).toEqual({ VAR1: 'value1', VAR2: 'file', 'VAR2.SUB2.0': 'value2' });
+    expect(result).toEqual({
+      VAR1: 'value1',
+      VAR2: 'file',
+      'VAR2.SUB2.0': 'value2',
+      VAR_YML1: 'file',
+      VAR_YML2: 'file',
+      VAR_YAML1: 'file',
+      VAR_YAML2: 'file'
+    });
   });
 
   it('file: multiple glob', async () => {
@@ -85,15 +95,26 @@ describe('parseVariables', () => {
       const result = await parseVariables([
         '{ "var1": "args", "var2": "args" }',
         `@${path.join(data, 'var.json').replace(/\\/g, '/')}`,
+        `@${path.join(data, '*.yml').replace(/\\/g, '/')}`,
         '$REPLACETOKENS_TESTS_VARS',
-        '["array", { "var4": "array" }]'
+        '["array", { "var4": "array" }]',
+        '{ "var_yml2": "inline" }'
       ]);
 
       // assert
       expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.json')}'`);
+      expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.yml')}'`);
       expect(debugSpy).toHaveBeenCalledWith("loading variables from env 'REPLACETOKENS_TESTS_VARS'");
 
-      expect(result).toEqual({ VAR1: 'args', VAR2: 'file', VAR3: 'env', '0': 'array', '1.VAR4': 'array' });
+      expect(result).toEqual({
+        VAR1: 'args',
+        VAR2: 'file',
+        VAR3: 'env',
+        '0': 'array',
+        '1.VAR4': 'array',
+        VAR_YML1: 'file',
+        VAR_YML2: 'inline'
+      });
     } finally {
       delete process.env.REPLACETOKENS_TESTS_VARS;
     }
