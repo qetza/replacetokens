@@ -193,15 +193,16 @@ describe('run', () => {
     // arrange
     spyOnConsole();
 
-    process.env.REPLACETOKENS_TESTS_VARS = '{ "var3": "env" }';
+    process.env.REPLACETOKENS_TESTS_VARS = '{ "var3": "env" } // comment';
 
     try {
       jest.replaceProperty(
         process,
         'argv',
         argv(
-          '{ "var1": "args" }',
+          '{ "var1": "args" } // comment',
           '@**/vars.(json|yml|yaml)',
+          '@**/var.jsonc',
           '$REPLACETOKENS_TESTS_VARS',
           '["array", { "var4": "array" }]',
           '{ "var_yml2": "inline", "var_yaml1": "inline" }'
@@ -216,6 +217,7 @@ describe('run', () => {
         ['file1'],
         {
           VAR1: 'value1',
+          VAR2: 'file',
           'VAR2.SUB2.0': 'value2',
           VAR3: 'env',
           '0': 'array',

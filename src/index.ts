@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fg from 'fast-glob';
 import * as yaml from 'js-yaml';
+import stripJsonComments from './strip-json-comments';
 
 export class Encodings {
   static readonly Auto: string = 'auto';
@@ -88,11 +89,11 @@ export async function parseVariables(
       // load from environment variable
       console.debug(`loading variables from env '${v.substring(1)}'`);
 
-      return [JSON.parse(process.env[v.substring(1)] || '{}')];
+      return [JSON.parse(stripJsonComments(process.env[v.substring(1)] || '{}'))];
     }
 
     // return given variables
-    return [JSON.parse(v)];
+    return [JSON.parse(stripJsonComments(v))];
   };
 
   // merge inputs
@@ -132,7 +133,7 @@ async function loadVariablesFromFile(name: string, options?: ParseVariablesOptio
         vars.push(v);
       });
     } else {
-      vars.push(JSON.parse(content));
+      vars.push(JSON.parse(stripJsonComments(content)));
     }
   }
 

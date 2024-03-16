@@ -1,0 +1,6 @@
+/* block
+ * comment
+ */
+{
+  "var2": "file" // inline comment
+}
