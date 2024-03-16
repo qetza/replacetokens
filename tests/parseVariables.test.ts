@@ -18,7 +18,10 @@ describe('parseVariables', () => {
 
   it('objects', async () => {
     // act
-    const result = await parseVariables(['{ "var1": "value1" }', '{ "var2": { "sub2": ["value2"] } }']);
+    const result = await parseVariables([
+      '{ "var1": "value1" } // comment',
+      '{ /* comment */ "var2": { "sub2": ["value2"] } }'
+    ]);
 
     // assert
     expect(debugSpy).not.toHaveBeenCalled();
@@ -38,10 +41,10 @@ describe('parseVariables', () => {
 
   it('file: glob', async () => {
     // act
-    const result = await parseVariables(['@**/*.(json|yml|yaml)'], { root: data });
+    const result = await parseVariables(['@**/*.(json|jsonc|yml|yaml)'], { root: data });
 
     // assert
-    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.json')}'`);
+    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.jsonc')}'`);
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.json')}'`);
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.yml')}'`);
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.yaml')}'`);
@@ -62,16 +65,19 @@ describe('parseVariables', () => {
     const varsPath = '**/*.json';
 
     // act
-    const result = await parseVariables(['@**/*.json;!var.json'], { root: data });
+    const result = await parseVariables(['@**/*.(json|jsons);!var.jsonc'], { root: data });
 
     // assert
+    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.json')}'`);
+
     expect(result).toEqual({ VAR1: 'value1', 'VAR2.SUB2.0': 'value2' });
   });
 
   it('env', async () => {
     // arrange
     const vars = { var1: 'value1', var2: { sub2: ['value2'] } };
-    process.env.REPLACETOKENS_TESTS_VARS = JSON.stringify(vars);
+    process.env.REPLACETOKENS_TESTS_VARS =
+      '{ "var1": "value1", /* comment */ "var2": { "sub2": ["value2"] } } // comment';
 
     try {
       // act
@@ -94,7 +100,7 @@ describe('parseVariables', () => {
       // act
       const result = await parseVariables([
         '{ "var1": "args", "var2": "args" }',
-        `@${path.join(data, 'var.json').replace(/\\/g, '/')}`,
+        `@${path.join(data, 'var.jsonc').replace(/\\/g, '/')}`,
         `@${path.join(data, '*.yml').replace(/\\/g, '/')}`,
         '$REPLACETOKENS_TESTS_VARS',
         '["array", { "var4": "array" }]',
@@ -102,7 +108,7 @@ describe('parseVariables', () => {
       ]);
 
       // assert
-      expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.json')}'`);
+      expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.jsonc')}'`);
       expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.yml')}'`);
       expect(debugSpy).toHaveBeenCalledWith("loading variables from env 'REPLACETOKENS_TESTS_VARS'");
 
@@ -173,10 +179,10 @@ describe('parseVariables', () => {
 
   it('options: dot', async () => {
     // act
-    const result = await parseVariables(['@**/*.json'], { root: data, dot: true });
+    const result = await parseVariables(['@**/*.(json|jsonc)'], { root: data, dot: true });
 
     // assert
-    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.json')}'`);
+    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'var.jsonc')}'`);
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, 'vars.json')}'`);
     expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${path.join(data, '.vars', 'var.json')}'`);
 
