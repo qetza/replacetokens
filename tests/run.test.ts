@@ -201,9 +201,10 @@ describe('run', () => {
         'argv',
         argv(
           '{ "var1": "args" }',
-          `@${path.join(data, 'var.json').replace(/\\/g, '/')}`,
+          '@**/vars.(json|yml|yaml)',
           '$REPLACETOKENS_TESTS_VARS',
-          '["array", { "var4": "array" }]'
+          '["array", { "var4": "array" }]',
+          '{ "var_yml2": "inline", "var_yaml1": "inline" }'
         )
       );
 
@@ -213,7 +214,17 @@ describe('run', () => {
       // assert
       expect(replaceTokensSpy).toHaveBeenCalledWith(
         ['file1'],
-        { VAR1: 'args', VAR2: 'file', VAR3: 'env', '0': 'array', '1.VAR4': 'array' },
+        {
+          VAR1: 'value1',
+          'VAR2.SUB2.0': 'value2',
+          VAR3: 'env',
+          '0': 'array',
+          '1.VAR4': 'array',
+          VAR_YML1: 'file',
+          VAR_YML2: 'inline',
+          VAR_YAML1: 'inline',
+          VAR_YAML2: 'file'
+        },
         expect.anything()
       );
     } finally {

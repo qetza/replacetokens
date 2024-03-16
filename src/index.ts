@@ -4,6 +4,7 @@ import * as jschardet from 'jschardet';
 import * as path from 'path';
 import * as os from 'os';
 import * as fg from 'fast-glob';
+import * as yaml from 'js-yaml';
 
 export class Encodings {
   static readonly Auto: string = 'auto';
@@ -123,8 +124,16 @@ async function loadVariablesFromFile(name: string, options?: ParseVariablesOptio
   for (const file of files) {
     console.debug(`loading variables from file '${normalizePath(file)}'`);
 
+    const extension = path.extname(file).toLowerCase();
     const content = (await readTextFile(file)).content;
-    vars.push(JSON.parse(content));
+
+    if (['.yml', '.yaml'].includes(extension)) {
+      yaml.loadAll(content, (v: any) => {
+        vars.push(v);
+      });
+    } else {
+      vars.push(JSON.parse(content));
+    }
   }
 
   return vars;
