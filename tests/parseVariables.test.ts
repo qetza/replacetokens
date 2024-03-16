@@ -109,37 +109,46 @@ describe('parseVariables', () => {
     expect(result).toEqual({ VAR1: 'value1', 'VAR2:SUB2:0': 'value2' });
   });
 
-  it('options: normalizeWin32=true', async () => {
-    // arrange
-    const varsPath = path.join(data, 'vars.json').replace(/\//g, '\\');
+  if (os.platform() === 'win32') {
+    it('options: normalizeWin32=true', async () => {
+      // arrange
+      const varsPath = path.join(data, 'vars.json');
 
-    // act
-    const result = await parseVariables([`@${varsPath}`], { normalizeWin32: true });
+      // act
+      const result = await parseVariables([`@${varsPath}`], { normalizeWin32: true });
 
-    // assert
-    expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${varsPath}'`);
-
-    expect(result).toEqual({ VAR1: 'value1', 'VAR2.SUB2.0': 'value2' });
-  });
-
-  it('options: normalizeWin32=false', async () => {
-    // arrange
-    const varsPath = path.join(data, 'vars.json').replace(/\//g, '\\');
-
-    // act
-    const result = await parseVariables([`@${varsPath}`], { normalizeWin32: false });
-
-    // assert
-    if (os.platform() === 'win32') {
-      expect(debugSpy).not.toHaveBeenCalled();
-
-      expect(result).toEqual({});
-    } else {
+      // assert
       expect(debugSpy).toHaveBeenCalledWith(`loading variables from file '${varsPath}'`);
 
       expect(result).toEqual({ VAR1: 'value1', 'VAR2.SUB2.0': 'value2' });
-    }
-  });
+    });
+
+    it('options: normalizeWin32=false', async () => {
+      // arrange
+      const varsPath = path.join(data, 'vars.json');
+
+      // act
+      const result = await parseVariables([`@${varsPath}`], { normalizeWin32: false });
+
+      // assert
+      expect(debugSpy).not.toHaveBeenCalled();
+
+      expect(result).toEqual({});
+    });
+  } else {
+    it('options: normalizeWin32=true', async () => {
+      // arrange
+      const varsPath = path.join(data, 'vars.json').replace(/\//g, '\\');
+
+      // act
+      const result = await parseVariables([`@${varsPath}`], { normalizeWin32: true });
+
+      // assert
+      expect(debugSpy).not.toHaveBeenCalledWith(`loading variables from file '${varsPath}'`);
+
+      expect(result).toEqual({});
+    });
+  }
 
   it('options: dot', async () => {
     // act
