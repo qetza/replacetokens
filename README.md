@@ -55,7 +55,7 @@ Example: `**/*.json; !local/ => out/*.json` will match all files ending with `.j
 
 `--variables <list>`
 
-A list of JSON encoded key/values (keys are **case-insensitive**).
+A list of strings or JSON encoded key/values (keys are **case-insensitive**).
 
 If an entry starts with:
 - `@`: value is parsed as a multiple glob patterns separated by a semi-colon (';') using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax to JSON or YAML files
