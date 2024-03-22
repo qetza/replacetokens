@@ -1,0 +1,10 @@
+0: array
+1.var4: array
+var1: value1
+var2: file
+var2.sub2.0: value2
+var3: env
+var_yml1: file
+var_yml2: inline
+var_yaml1: inline
+var_yaml2: file

@@ -4,7 +4,19 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 
 const data = path.join(__dirname, 'data/run');
+const tmp = path.join(__dirname, '_tmp/run');
+
 let replaceTokensSpy: jest.SpiedFunction<typeof rt.replaceTokens>;
+let loadVariablesSpy: jest.SpiedFunction<typeof rt.loadVariables>;
+let consoleSpies: {
+  log: jest.SpiedFunction<typeof console.log>;
+  debug: jest.SpiedFunction<typeof console.debug>;
+  info: jest.SpiedFunction<typeof console.info>;
+  warn: jest.SpiedFunction<typeof console.warn>;
+  error: jest.SpiedFunction<typeof console.error>;
+  group: jest.SpiedFunction<typeof console.group>;
+  groupEnd: jest.SpiedFunction<typeof console.groupEnd>;
+};
 
 describe('run', () => {
   beforeEach(() => {
@@ -13,14 +25,8 @@ describe('run', () => {
     replaceTokensSpy = jest
       .spyOn(rt, 'replaceTokens')
       .mockResolvedValue({ defaults: 1, files: 2, replaced: 3, tokens: 3, transforms: 5 });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  function spyOnConsole() {
-    return {
+    loadVariablesSpy = jest.spyOn(rt, 'loadVariables').mockResolvedValue({});
+    consoleSpies = {
       log: jest.spyOn(console, 'log').mockImplementation(),
       debug: jest.spyOn(console, 'debug').mockImplementation(),
       info: jest.spyOn(console, 'info').mockImplementation(),
@@ -29,7 +35,11 @@ describe('run', () => {
       group: jest.spyOn(console, 'group').mockImplementation(),
       groupEnd: jest.spyOn(console, 'groupEnd').mockImplementation()
     };
-  }
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   function argv(...args: string[]) {
     return ['node', 'index.js', '--sources', 'file1', '--variables', '{}', ...args];
@@ -40,7 +50,6 @@ describe('run', () => {
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(code => {
       throw `exit: ${code}`;
     });
-    const consoleSpies = spyOnConsole();
 
     jest.replaceProperty(process, 'argv', ['node', 'index.js', '--version']);
 
@@ -63,7 +72,6 @@ describe('run', () => {
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(code => {
       throw `exit: ${code}`;
     });
-    const consoleSpies = spyOnConsole();
 
     jest.replaceProperty(process, 'argv', ['node', 'index.js']);
 
@@ -81,8 +89,6 @@ describe('run', () => {
 
   it('output', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv());
 
     // act
@@ -96,8 +102,6 @@ describe('run', () => {
 
   it('sources', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', [
       'node',
       'index.js',
@@ -112,13 +116,15 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(replaceTokensSpy).toHaveBeenCalledWith(['folder/file1', 'folder/file2'], {}, expect.anything());
+    expect(replaceTokensSpy).toHaveBeenCalledWith(
+      ['folder/file1', 'folder/file2'],
+      expect.any(Function),
+      expect.anything()
+    );
   });
 
   it('argument variables', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', [
       'node',
       'index.js',
@@ -133,16 +139,15 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(replaceTokensSpy).toHaveBeenCalledWith(
-      ['file1'],
-      { VAR1: 'value1', 'VAR2.SUB2.0': 'value2' },
-      expect.anything()
-    );
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{ "var1": "value1" }', '{ "var2": { "sub2": ["value2"] } }'], {
+      normalizeWin32: false,
+      separator: rt.Defaults.Separator
+    });
+    expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
   });
 
   it('file variables', async () => {
     // arrange
-    spyOnConsole();
     const varsPath = path.join(data, 'vars.json').replace(/\\/g, '/');
 
     jest.replaceProperty(process, 'argv', ['node', 'index.js', '--sources', 'file1', '--variables', `@${varsPath}`]);
@@ -151,16 +156,15 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(replaceTokensSpy).toHaveBeenCalledWith(
-      ['file1'],
-      { VAR1: 'value1', 'VAR2.SUB2.0': 'value2' },
-      expect.anything()
-    );
+    expect(loadVariablesSpy).toHaveBeenCalledWith([`@${varsPath}`], {
+      normalizeWin32: false,
+      separator: rt.Defaults.Separator
+    });
+    expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
   });
 
   it('env variables', async () => {
     // arrange
-    spyOnConsole();
     const vars = { var1: 'value1', var2: { sub2: ['value2'] } };
 
     process.env.REPLACETOKENS_TESTS_VARS = JSON.stringify(vars);
@@ -179,11 +183,11 @@ describe('run', () => {
       await run();
 
       // assert
-      expect(replaceTokensSpy).toHaveBeenCalledWith(
-        ['file1'],
-        { VAR1: 'value1', 'VAR2.SUB2.0': 'value2' },
-        expect.anything()
-      );
+      expect(loadVariablesSpy).toHaveBeenCalledWith(['$REPLACETOKENS_TESTS_VARS'], {
+        normalizeWin32: false,
+        separator: rt.Defaults.Separator
+      });
+      expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
     } finally {
       delete process.env.REPLACETOKENS_TESTS_VARS;
     }
@@ -191,8 +195,6 @@ describe('run', () => {
 
   it('merge variables', async () => {
     // arrange
-    spyOnConsole();
-
     process.env.REPLACETOKENS_TESTS_VARS = '{ "var3": "env" } // comment';
 
     try {
@@ -213,22 +215,19 @@ describe('run', () => {
       await run();
 
       // assert
-      expect(replaceTokensSpy).toHaveBeenCalledWith(
-        ['file1'],
-        {
-          VAR1: 'value1',
-          VAR2: 'file',
-          'VAR2.SUB2.0': 'value2',
-          VAR3: 'env',
-          '0': 'array',
-          '1.VAR4': 'array',
-          VAR_YML1: 'file',
-          VAR_YML2: 'inline',
-          VAR_YAML1: 'inline',
-          VAR_YAML2: 'file'
-        },
-        expect.anything()
+      expect(loadVariablesSpy).toHaveBeenCalledWith(
+        [
+          '{}',
+          '{ "var1": "args" } // comment',
+          '@**/vars.(json|yml|yaml)',
+          '@**/var.jsonc',
+          '$REPLACETOKENS_TESTS_VARS',
+          '["array", { "var4": "array" }]',
+          '{ "var_yml2": "inline", "var_yaml1": "inline" }'
+        ],
+        { normalizeWin32: false, separator: rt.Defaults.Separator }
       );
+      expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
     } finally {
       delete process.env.REPLACETOKENS_TESTS_VARS;
     }
@@ -236,7 +235,6 @@ describe('run', () => {
 
   it('default', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     const replaceTokensSpy = jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -256,37 +254,32 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(replaceTokensSpy).toHaveBeenCalledWith(
-      ['file1'],
-      {},
-      {
-        root: undefined,
-        encoding: 'auto',
-        token: {
-          pattern: 'default',
-          prefix: undefined,
-          suffix: undefined
-        },
-        missing: {
-          action: 'none',
-          default: undefined,
-          log: 'warn'
-        },
-        recursive: undefined,
-        addBOM: undefined,
-        escape: {
-          type: 'auto',
-          escapeChar: undefined,
-          chars: undefined
-        },
-        separator: '.',
-        transforms: {
-          enabled: undefined,
-          prefix: '(',
-          suffix: ')'
-        }
+    expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), {
+      root: undefined,
+      encoding: 'auto',
+      token: {
+        pattern: 'default',
+        prefix: undefined,
+        suffix: undefined
+      },
+      missing: {
+        action: 'none',
+        default: undefined,
+        log: 'warn'
+      },
+      recursive: undefined,
+      addBOM: undefined,
+      escape: {
+        type: 'auto',
+        escapeChar: undefined,
+        chars: undefined
+      },
+      transforms: {
+        enabled: undefined,
+        prefix: '(',
+        suffix: ')'
       }
-    );
+    });
 
     expect(consoleSpies.debug).not.toHaveBeenCalled();
     expect(consoleSpies.info).toHaveBeenCalled();
@@ -298,7 +291,6 @@ describe('run', () => {
 
   it('log-level: debug', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -330,7 +322,6 @@ describe('run', () => {
 
   it('log-level: info', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -362,7 +353,6 @@ describe('run', () => {
 
   it('log-level: warn', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -394,7 +384,6 @@ describe('run', () => {
 
   it('log-level: error', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -426,7 +415,6 @@ describe('run', () => {
 
   it('log-level: none', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -458,7 +446,6 @@ describe('run', () => {
 
   it('no-log-color', async () => {
     // arrange
-    const consoleSpies = spyOnConsole();
     jest.spyOn(rt, 'replaceTokens').mockImplementation((sources, variables, options) => {
       return new Promise((resolve, reject) => {
         console.debug('debug');
@@ -490,25 +477,26 @@ describe('run', () => {
 
   it('root', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--root', 'root'));
 
     // act
     await run();
 
     // assert
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{}'], {
+      normalizeWin32: false,
+      root: 'root',
+      separator: rt.Defaults.Separator
+    });
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ root: 'root' })
     );
   });
 
   it('encoding', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--encoding', 'encoding'));
 
     // act
@@ -517,15 +505,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ encoding: 'encoding' })
     );
   });
 
   it('token-pattern', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--token-pattern', 'octopus'));
 
     // act
@@ -534,15 +520,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ token: expect.objectContaining({ pattern: 'octopus' }) })
     );
   });
 
   it('token-prefix', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--token-prefix', '[['));
 
     // act
@@ -551,15 +535,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ token: expect.objectContaining({ prefix: '[[' }) })
     );
   });
 
   it('token-suffix', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--token-suffix', ']]'));
 
     // act
@@ -568,15 +550,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ token: expect.objectContaining({ suffix: ']]' }) })
     );
   });
 
   it('missing-var-action', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--missing-var-action', 'keep'));
 
     // act
@@ -585,15 +565,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ missing: expect.objectContaining({ action: 'keep', default: undefined }) })
     );
   });
 
   it('missing-var-default', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--missing-var-action', 'replace', '--missing-var-default', 'default'));
 
     // act
@@ -602,15 +580,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ missing: expect.objectContaining({ action: 'replace', default: 'default' }) })
     );
   });
 
   it('missing-var-log', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--missing-var-log', 'error'));
 
     // act
@@ -619,15 +595,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ missing: expect.objectContaining({ log: 'error' }) })
     );
   });
 
   it('recursive', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--recursive'));
 
     // act
@@ -636,15 +610,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ recursive: true })
     );
   });
 
   it('add-bom', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--add-bom'));
 
     // act
@@ -653,15 +625,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ addBOM: true })
     );
   });
 
   it('escape', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--escape', 'xml'));
 
     // act
@@ -670,15 +640,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ escape: expect.objectContaining({ type: 'xml' }) })
     );
   });
 
   it('escape-char', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--escape-char', '/'));
 
     // act
@@ -687,15 +655,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ escape: expect.objectContaining({ escapeChar: '/' }) })
     );
   });
 
   it('chars-to-escape', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--chars-to-escape', 'abcd'));
 
     // act
@@ -704,32 +670,25 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ escape: expect.objectContaining({ chars: 'abcd' }) })
     );
   });
 
   it('separator', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--separator', ':'));
 
     // act
     await run();
 
     // assert
-    expect(replaceTokensSpy).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({ separator: ':' })
-    );
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{}'], { normalizeWin32: false, separator: ':' });
+    expect(replaceTokensSpy).toHaveBeenCalledWith(expect.anything(), expect.any(Function), expect.anything());
   });
 
   it('transforms', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--transforms'));
 
     // act
@@ -738,15 +697,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ transforms: expect.objectContaining({ enabled: true }) })
     );
   });
 
   it('transforms-prefix', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--transforms-prefix', '['));
 
     // act
@@ -755,15 +712,13 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ transforms: expect.objectContaining({ prefix: '[' }) })
     );
   });
 
   it('transforms-suffix', async () => {
     // arrange
-    spyOnConsole();
-
     jest.replaceProperty(process, 'argv', argv('--transforms-suffix', ']'));
 
     // act
@@ -772,8 +727,60 @@ describe('run', () => {
     // assert
     expect(replaceTokensSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.anything(),
+      expect.any(Function),
       expect.objectContaining({ transforms: expect.objectContaining({ suffix: ']' }) })
     );
+  });
+
+  it('replace tokens', async () => {
+    // arrange
+    await fs.mkdir(tmp, { recursive: true });
+
+    process.env.REPLACETOKENS_TESTS_VARS = '{ "var3": "env" } // comment';
+
+    try {
+      let input = path.join(tmp, 'file.txt');
+      await fs.copyFile(path.join(data, 'file.txt'), input);
+
+      input = path.resolve(input);
+
+      jest.replaceProperty(process, 'argv', [
+        'node',
+        'index.js',
+        '--sources',
+        input.replace(/\\/g, '/'),
+        '--variables',
+        '{ "var1": "args" } // comment',
+        '@**/vars.(json|yml|yaml)',
+        '@**/var.jsonc',
+        '$REPLACETOKENS_TESTS_VARS',
+        '["array", { "var4": "array" }]',
+        '{ "VAR_YML2": "inline", "var_yaml1": "inline" }',
+        '--root',
+        data,
+        '--log-level',
+        'debug'
+      ]);
+
+      loadVariablesSpy.mockRestore();
+      replaceTokensSpy.mockRestore();
+
+      // act
+      await run();
+
+      // assert
+      expect(consoleSpies.log).toHaveBeenCalledWith(
+        JSON.stringify({ tokens: 10, replaced: 10, files: 1, defaults: 0, transforms: 0 })
+      );
+
+      const actual = await fs.readFile(input, 'utf8');
+      const expected = await fs.readFile(path.join(data, 'file.expected.txt'), 'utf8');
+
+      expect(actual).toEqual(expected);
+    } finally {
+      delete process.env.REPLACETOKENS_TESTS_VARS;
+
+      await fs.rm(tmp, { force: true, recursive: true });
+    }
   });
 });

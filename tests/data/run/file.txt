@@ -1,0 +1,10 @@
+0: #{0}#
+1.var4: #{1.VAR4}#
+var1: #{var1}#
+var2: #{var2}#
+var2.sub2.0: #{VAR2.sub2.0}#
+var3: #{VAR3}#
+var_yml1: #{VAR_yml1}#
+var_yml2: #{var_YML2}#
+var_yaml1: #{VAR_yaml1}#
+var_yaml2: #{var_YAML2}#

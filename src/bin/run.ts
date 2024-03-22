@@ -13,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.4.0')
+    .version('1.5.0')
     .usage('$0 [args]')
     .help()
     .options({
@@ -188,12 +188,12 @@ export async function run() {
 
   try {
     // replace tokens
-    const variables = await rt.parseVariables(argv.variables, {
+    const variables = await rt.loadVariables(argv.variables, {
       separator: argv.separator,
       normalizeWin32: false,
       root: argv.root
     });
-    const result = await rt.replaceTokens(argv.sources, variables, {
+    const result = await rt.replaceTokens(argv.sources, (name: string) => variables[name], {
       root: argv.root,
       encoding: argv.encoding,
       token: {
@@ -216,7 +216,6 @@ export async function run() {
         escapeChar: argv['escape-char'],
         chars: argv['chars-to-escape']
       },
-      separator: argv.separator,
       transforms: {
         enabled: argv.transforms,
         prefix: argv['transforms-prefix'],

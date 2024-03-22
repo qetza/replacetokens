@@ -43,6 +43,13 @@ describe('replaceTokens', () => {
     };
   }
 
+  function getVariableCallback(variables: { [key: string]: string }): (name: string) => string | undefined {
+    var normalizedVariables: { [key: string]: string } = {};
+    for (const [key, value] of Object.entries(variables)) normalizedVariables[key.toUpperCase()] = value;
+
+    return (name: string) => normalizedVariables[name];
+  }
+
   function expectCountersToEqual(
     counters: Counter,
     defaults: number,
@@ -60,11 +67,25 @@ describe('replaceTokens', () => {
     });
   }
 
-  async function expectFilesToEqual(actual: string, expected: string): Promise<void> {
+  async function expectFileToEqual(actual: string, expected: string): Promise<void> {
     const a = await fs.readFile(actual, 'utf8');
     const e = await fs.readFile(path.join(data, expected), 'utf8');
 
     expect(a).toEqual(e);
+  }
+
+  async function expectBinaryFileToEqual(actual: string, expected: string): Promise<void> {
+    let buffer: Buffer = await fs.readFile(actual);
+    let hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    const h1: string = hash.digest('hex');
+
+    buffer = await fs.readFile(path.join(data, expected));
+    hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    const h2: string = hash.digest('hex');
+
+    expect(h1).toEqual(h2);
   }
 
   describe('sources', () => {
@@ -74,11 +95,14 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(input), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(input),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('relative input path', async () => {
@@ -87,14 +111,17 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(path.relative(process.cwd(), input)), {
-        var1: 'var1_value',
-        var2: 'var2_value'
-      });
+      const result = await replaceTokens(
+        normalizeSources(path.relative(process.cwd(), input)),
+        getVariableCallback({
+          var1: 'var1_value',
+          var2: 'var2_value'
+        })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('input path with wildcard', async () => {
@@ -104,15 +131,18 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(path.join(tmp, '*.json')), {
-        var1: 'var1_value',
-        var2: 'var2_value'
-      });
+      const result = await replaceTokens(
+        normalizeSources(path.join(tmp, '*.json')),
+        getVariableCallback({
+          var1: 'var1_value',
+          var2: 'var2_value'
+        })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 2, 4, 4, 0);
-      await expectFilesToEqual(input1, 'default.expected.json');
-      await expectFilesToEqual(input2, 'default.expected.json');
+      await expectFileToEqual(input1, 'default.expected.json');
+      await expectFileToEqual(input2, 'default.expected.json');
     });
 
     it('negative input pattern', async () => {
@@ -122,15 +152,18 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(`${path.join(tmp, '*.json')};!${input2}`), {
-        var1: 'var1_value',
-        var2: 'var2_value'
-      });
+      const result = await replaceTokens(
+        normalizeSources(`${path.join(tmp, '*.json')};!${input2}`),
+        getVariableCallback({
+          var1: 'var1_value',
+          var2: 'var2_value'
+        })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input1, 'default.expected.json');
-      await expectFilesToEqual(input2, 'default.json');
+      await expectFileToEqual(input1, 'default.expected.json');
+      await expectFileToEqual(input2, 'default.json');
     });
 
     it('multiple input patterns', async () => {
@@ -140,12 +173,15 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(input1, input2), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(input1, input2),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 2, 4, 4, 0);
-      await expectFilesToEqual(input1, 'default.expected.json');
-      await expectFilesToEqual(input2, 'default.expected.json');
+      await expectFileToEqual(input1, 'default.expected.json');
+      await expectFileToEqual(input2, 'default.expected.json');
     });
 
     it('relative input path with custom root', async () => {
@@ -156,13 +192,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources('default1.json'),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         { root: tmp }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('absolute output path', async () => {
@@ -173,12 +209,15 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(source), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(source),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.json');
-      await expectFilesToEqual(output, 'default.expected.json');
+      await expectFileToEqual(input, 'default.json');
+      await expectFileToEqual(output, 'default.expected.json');
     });
 
     it('relative output path', async () => {
@@ -189,12 +228,15 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(source), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(source),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.json');
-      await expectFilesToEqual(path.join(tmp, output), 'default.expected.json');
+      await expectFileToEqual(input, 'default.json');
+      await expectFileToEqual(path.join(tmp, output), 'default.expected.json');
     });
 
     it('output path with wildcard', async () => {
@@ -205,38 +247,19 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(source), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(source),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.json');
-      await expectFilesToEqual(path.join(tmp, 'output/default2.json'), 'default.expected.json');
+      await expectFileToEqual(input, 'default.json');
+      await expectFileToEqual(path.join(tmp, 'output/default2.json'), 'default.expected.json');
     });
   });
 
   describe('variables', () => {
-    it('logs', async () => {
-      // arrange
-      const input = await copyData('default.json', 'default1.json');
-      const consoleSpies = spyOnConsole();
-
-      // act
-      const result = await replaceTokens(normalizeSources(input), {
-        var1: 'var1_value',
-        var2: 'var2_value',
-        VAR3: ['var3_value0', 'var3_value1']
-      });
-
-      // assert
-      expect(consoleSpies.group).toHaveBeenCalledWith('loading variables');
-      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'var1'");
-      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'var2'");
-      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'VAR3.0'");
-      expect(consoleSpies.debug).toHaveBeenCalledWith("loaded 'VAR3.1'");
-      expect(consoleSpies.info).toHaveBeenCalledWith('4 variables loaded');
-      expect(consoleSpies.groupEnd).toHaveBeenCalled();
-    });
-
     it('case insensitive', async () => {
       // arrange
       const input = await copyData('default.separator.json', 'default1.json');
@@ -245,13 +268,12 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { VARS: [{ value: 'var1_value' }, { VALUE: 'var2_value' }] },
-        { separator: ':' }
+        getVariableCallback({ 'VARS:0:value': 'var1_value', 'VARS:1:VALUE': 'var2_value' })
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
   });
 
@@ -262,11 +284,14 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(input), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(input),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('azure pipelines pattern', async () => {
@@ -277,7 +302,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           token: { pattern: TokenPatterns.AzurePipelines }
         }
@@ -285,7 +310,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('double braces pattern', async () => {
@@ -296,7 +321,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           token: { pattern: TokenPatterns.DoubleBraces }
         }
@@ -304,7 +329,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('double underscores pattern', async () => {
@@ -315,7 +340,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           token: { pattern: TokenPatterns.DoubleUnderscores }
         }
@@ -323,7 +348,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('github actions pattern', async () => {
@@ -334,7 +359,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           token: { pattern: TokenPatterns.GithubActions }
         }
@@ -342,7 +367,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('octopus pattern', async () => {
@@ -353,7 +378,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           token: { pattern: TokenPatterns.Octopus }
         }
@@ -361,7 +386,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('custom pattern', async () => {
@@ -372,7 +397,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           token: { pattern: TokenPatterns.Custom, prefix: '\\\\', suffix: '//' }
         }
@@ -380,7 +405,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
   });
 
@@ -391,17 +416,13 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        {},
-        {
-          missing: { action: MissingVariables.Action.None }
-        }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { action: MissingVariables.Action.None }
+      });
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.empty.json');
+      await expectFileToEqual(input, 'default.expected.empty.json');
     });
 
     it('keep', async () => {
@@ -410,17 +431,13 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        {},
-        {
-          missing: { action: MissingVariables.Action.Keep }
-        }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { action: MissingVariables.Action.Keep }
+      });
 
       // assert
       expectCountersToEqual(result, 0, 1, 0, 2, 0);
-      await expectFilesToEqual(input, 'default.json');
+      await expectFileToEqual(input, 'default.json');
     });
 
     it('replace', async () => {
@@ -429,17 +446,13 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        {},
-        {
-          missing: { action: MissingVariables.Action.Replace, default: 'default' }
-        }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { action: MissingVariables.Action.Replace, default: 'default' }
+      });
 
       // assert
       expectCountersToEqual(result, 2, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.default.json');
+      await expectFileToEqual(input, 'default.expected.default.json');
     });
   });
 
@@ -450,17 +463,13 @@ describe('replaceTokens', () => {
       const consoleSpies = spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        {},
-        {
-          missing: { log: MissingVariables.Log.Off }
-        }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { log: MissingVariables.Log.Off }
+      });
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.empty.json');
+      await expectFileToEqual(input, 'default.expected.empty.json');
       expect(consoleSpies.warn).not.toHaveBeenCalledWith("variable 'var1' not found");
     });
 
@@ -470,17 +479,13 @@ describe('replaceTokens', () => {
       const consoleSpies = spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        {},
-        {
-          missing: { log: MissingVariables.Log.Warn }
-        }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { log: MissingVariables.Log.Warn }
+      });
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.empty.json');
+      await expectFileToEqual(input, 'default.expected.empty.json');
       expect(consoleSpies.warn).toHaveBeenCalledWith("variable 'var1' not found");
     });
 
@@ -490,17 +495,13 @@ describe('replaceTokens', () => {
       const consoleSpies = spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        {},
-        {
-          missing: { log: MissingVariables.Log.Error }
-        }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { log: MissingVariables.Log.Error }
+      });
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      expectFilesToEqual(input, 'default.expected.empty.json');
+      expectFileToEqual(input, 'default.expected.empty.json');
       expect(consoleSpies.error).toHaveBeenCalledWith("variable 'var1' not found");
     });
   });
@@ -514,7 +515,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           transforms: { enabled: true }
         }
@@ -522,7 +523,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 1);
-      await expectFilesToEqual(input, 'default.expected.upper.json');
+      await expectFileToEqual(input, 'default.expected.upper.json');
     });
 
     it('lower', async () => {
@@ -533,7 +534,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'VAR1_VALUE', var2: 'var2_value' },
+        getVariableCallback({ var1: 'VAR1_VALUE', var2: 'var2_value' }),
         {
           transforms: { enabled: true }
         }
@@ -541,7 +542,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 1);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('base64', async () => {
@@ -552,7 +553,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           transforms: { enabled: true }
         }
@@ -560,7 +561,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 1);
-      await expectFilesToEqual(input, 'default.expected.base64.json');
+      await expectFileToEqual(input, 'default.expected.base64.json');
     });
 
     it('raw', async () => {
@@ -571,13 +572,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: '["var1", "value"]', var2: '{"value": "value"}' },
+        getVariableCallback({ var1: '["var1", "value"]', var2: '{"value": "value"}' }),
         { transforms: { enabled: true }, escape: { type: Escapes.Json } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 2);
-      await expectFilesToEqual(input, 'default.expected.raw.json');
+      await expectFileToEqual(input, 'default.expected.raw.json');
     });
 
     it('indent without first line', async () => {
@@ -588,13 +589,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { vars: '- var1: value1\n- var2: value2' },
+        getVariableCallback({ vars: '- var1: value1\n- var2: value2' }),
         { transforms: { enabled: true } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 1, 1, 1);
-      await expectFilesToEqual(input, 'default.expected.indent.yml');
+      await expectFileToEqual(input, 'default.expected.indent.yml');
     });
 
     it('indent with first line', async () => {
@@ -605,13 +606,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { vars: '- var1: value1\n- var2: value2' },
+        getVariableCallback({ vars: '- var1: value1\n- var2: value2' }),
         { transforms: { enabled: true } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 1, 1, 1);
-      await expectFilesToEqual(input, 'default.expected.indent.yml');
+      await expectFileToEqual(input, 'default.expected.indent.yml');
     });
 
     it('unsupported', async () => {
@@ -622,7 +623,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           transforms: { enabled: true }
         }
@@ -630,7 +631,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
       expect(consoleSpies.warn).toHaveBeenCalledWith("unsupported transform 'unknown'");
     });
 
@@ -642,7 +643,7 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         {
           transforms: { enabled: true, prefix: '[', suffix: ']' }
         }
@@ -650,7 +651,7 @@ describe('replaceTokens', () => {
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 1);
-      await expectFilesToEqual(input, 'default.expected.upper.json');
+      await expectFileToEqual(input, 'default.expected.upper.json');
     });
   });
 
@@ -663,13 +664,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { VAR1: 'var1#{var3}#', var2: 'var2_value', var3: '_#{var4}#', VAR4: 'value' },
+        getVariableCallback({ VAR1: 'var1#{var3}#', var2: 'var2_value', var3: '_#{var4}#', VAR4: 'value' }),
         { recursive: true }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 4, 4, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectFileToEqual(input, 'default.expected.json');
     });
 
     it('fail on cycle', async () => {
@@ -681,7 +682,7 @@ describe('replaceTokens', () => {
       await expect(
         replaceTokens(
           normalizeSources(input),
-          { VAR1: 'var1#{var2}#', var2: '_#{var1}#', var3: 'value' },
+          getVariableCallback({ VAR1: 'var1#{var2}#', var2: '_#{var1}#', var3: 'value' }),
           { recursive: true }
         )
       ).rejects.toThrow("found cycle with token 'var1'");
@@ -698,14 +699,14 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input1, input2),
-        { var1: '"var\'\\1\n\r\t&<value>\b\f', var2: 'var2_value' },
+        getVariableCallback({ var1: '"var\'\\1\n\r\t&<value>\b\f', var2: 'var2_value' }),
         { escape: { type: Escapes.Auto } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 2, 4, 4, 0);
-      await expectFilesToEqual(input1, 'default.expected.escape.json');
-      await expectFilesToEqual(input2, 'default.expected.escape.xml');
+      await expectFileToEqual(input1, 'default.expected.escape.json');
+      await expectFileToEqual(input2, 'default.expected.escape.xml');
     });
 
     it('JSON escape', async () => {
@@ -716,13 +717,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: '"var\'\\1\n\r\t&<value>\b\f', var2: 'var2_value' },
+        getVariableCallback({ var1: '"var\'\\1\n\r\t&<value>\b\f', var2: 'var2_value' }),
         { escape: { type: Escapes.Json } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.escape.json');
+      await expectFileToEqual(input, 'default.expected.escape.json');
     });
 
     it('XML escape', async () => {
@@ -733,13 +734,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: '"var\'\\1\n\r\t&<value>\b\f', var2: 'var2_value' },
+        getVariableCallback({ var1: '"var\'\\1\n\r\t&<value>\b\f', var2: 'var2_value' }),
         { escape: { type: Escapes.Xml } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.escape.xml');
+      await expectFileToEqual(input, 'default.expected.escape.xml');
     });
 
     it('no escape', async () => {
@@ -750,13 +751,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: '"var\\1\n\r\tvalue\b\f', var2: 'var2_value' },
+        getVariableCallback({ var1: '"var\\1\n\r\tvalue\b\f', var2: 'var2_value' }),
         { escape: { type: Escapes.Off } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.noescape.json');
+      await expectFileToEqual(input, 'default.expected.noescape.json');
     });
 
     it('custom escape', async () => {
@@ -767,13 +768,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(input),
-        { var1: '|var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: '|var1_value', var2: 'var2_value' }),
         { escape: { type: Escapes.Custom, escapeChar: '|', chars: '|_' } }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.customescape.json');
+      await expectFileToEqual(input, 'default.expected.customescape.json');
     });
   });
 
@@ -788,13 +789,13 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(source),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         { encoding: 'utf-8', addBOM: true }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(output, 'default.expected.bom.json');
+      await expectFileToEqual(output, 'default.expected.bom.json');
     });
 
     it('no BOM', async () => {
@@ -807,32 +808,91 @@ describe('replaceTokens', () => {
       // act
       const result = await replaceTokens(
         normalizeSources(source),
-        { var1: 'var1_value', var2: 'var2_value' },
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
         { encoding: 'utf-8', addBOM: false }
       );
 
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(output, 'default.expected.json');
+      await expectFileToEqual(output, 'default.expected.json');
     });
   });
 
-  describe('separator', () => {
-    it('flatten variables', async () => {
+  describe('auto encoding', () => {
+    it('ascii', async () => {
       // arrange
-      const input = await copyData('default.separator.json', 'default1.json');
+      const input = await copyData('ascii.txt', 'ascii.txt');
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(
-        normalizeSources(input),
-        { vars: [{ value: 'var1_value' }, { value: 'var2_value' }] },
-        { separator: ':' }
-      );
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({ var1: 'var1_value' }));
 
       // assert
-      expectCountersToEqual(result, 0, 1, 2, 2, 0);
-      await expectFilesToEqual(input, 'default.expected.json');
+      await expectBinaryFileToEqual(input, 'ascii.expected.txt');
+    });
+
+    it('utf-8', async () => {
+      // arrange
+      const input = await copyData('utf-8.txt', 'utf-8.txt');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({ var1: 'var1_value' }), {
+        addBOM: false
+      });
+
+      // assert
+      await expectBinaryFileToEqual(input, 'utf-8.expected.txt');
+    });
+
+    it('utf-8 with BOM', async () => {
+      // arrange
+      const input = await copyData('utf-8bom.txt', 'utf-8bom.txt');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({ var1: 'var1_value' }), {
+        addBOM: true
+      });
+
+      // assert
+      await expectBinaryFileToEqual(input, 'utf-8bom.expected.txt');
+    });
+
+    it('utf-16be', async () => {
+      // arrange
+      const input = await copyData('utf-16be.txt', 'utf-16be.txt');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({ var1: 'var1_value' }));
+
+      // assert
+      await expectBinaryFileToEqual(input, 'utf-16be.expected.txt');
+    });
+
+    it('utf-16le', async () => {
+      // arrange
+      const input = await copyData('utf-16le.txt', 'utf-16le.txt');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({ var1: 'var1_value' }));
+
+      // assert
+      await expectBinaryFileToEqual(input, 'utf-16le.expected.txt');
+    });
+
+    it('windows1252', async () => {
+      // arrange
+      const input = await copyData('windows1252.txt', 'windows1252.txt');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({ var1: 'var1_value' }));
+
+      // assert
+      await expectBinaryFileToEqual(input, 'windows1252.expected.txt');
     });
   });
 
@@ -843,22 +903,14 @@ describe('replaceTokens', () => {
       spyOnConsole();
 
       // act
-      const result = await replaceTokens(normalizeSources(input), { var1: 'var1_value', var2: 'var2_value' });
+      const result = await replaceTokens(
+        normalizeSources(input),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
 
       // assert
       expectCountersToEqual(result, 0, 1, 0, 0, 0);
-
-      let buffer: Buffer = await fs.readFile(input);
-      let hash = crypto.createHash('sha256');
-      hash.update(buffer);
-      const actual: string = hash.digest('hex');
-
-      buffer = await fs.readFile(path.join(data, 'icon.png'));
-      hash = crypto.createHash('sha256');
-      hash.update(buffer);
-      const expected: string = hash.digest('hex');
-
-      expect(actual).toEqual(expected);
+      expectBinaryFileToEqual(input, 'icon.png');
     });
   });
 });
