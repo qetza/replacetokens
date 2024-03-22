@@ -188,7 +188,7 @@ export async function run() {
 
   try {
     // replace tokens
-    const variables = await rt.parseVariables(argv.variables, {
+    const variables = await rt.loadVariables(argv.variables, {
       separator: argv.separator,
       normalizeWin32: false,
       root: argv.root

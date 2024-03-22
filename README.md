@@ -250,6 +250,32 @@ npm install replacetokens
 ```
 
 ### Usage
+#### loadVariables(string[] [, options])
+```typescript
+import * as rt from 'replacetokens';
+
+const variables = await rt.loadVariables(
+  [
+    '{ "var1": "value1" }', // inline key/values
+    '@**/vars.(json|yml)',  // read all vars.json and vars.yml files under root
+    '$VARS'                 // parse env VARS as JSON
+  ],
+  {
+    root: '.local'
+  });
+```
+
+Load variables from the given list of strings; keys are flatten, merged are returned in uppercase.
+
+See CLI documentation for the parsing pattern and constraints.
+
+options:
+- `dot`: allow patterns to match entries starting with a dot (`.`)
+- `normalizeWin32`: replace back-slashes (`\`) with forward-slashes (`/`) in file paths
+- `root`: _(default: current working directory)_: root path used when reading files with relative paths
+- `separator` _(default: .)_: the separator used when flattening the keys
+
+#### replaceTokens(string[], (string) => string | undefined [, options])
 ```typescript
 import * as rt from 'replacetokens';
 
@@ -264,7 +290,6 @@ const result = await rt.replaceTokens(
   });
 ```
 
-#### replaceTokens(string[], (string) => string | undefined [, options])
 Replaces the tokens in the `sources` files using the callback `getVariable` to retrieve the values (name will **always** be in uppercase).
 
 See CLI documentation for the input files pattern.
@@ -281,7 +306,7 @@ options:
   - `default` _(default: null)_: the default value
   - `log` _(default: warn)_: the key not found message log level
 - `recursive` _(default: false)_: specifies if recursive replacement is enabled
-- `root` _(default: current working directory)_:
+- `root` _(default: current working directory)_: root path used when reading files with relative paths
 - `token`: specifies the token pattern
   - `pattern` _(default: default)_: the token pattern
   - `prefix` _(default: null)_: the token prefix if `pattern` is `custom`

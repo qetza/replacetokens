@@ -67,44 +67,60 @@ export class Counter {
   transforms: number = 0;
 }
 
-export interface ParseVariablesOptions {
+export interface LoadVariablesOptions {
   separator?: string;
   normalizeWin32?: boolean;
   root?: string;
   dot?: boolean;
 }
-export async function parseVariables(
+
+export async function loadVariables(
   variables: string[],
-  options?: ParseVariablesOptions
+  options?: LoadVariablesOptions
 ): Promise<{ [key: string]: string }> {
   variables = variables || ['{}'];
 
-  // load all inputs
-  let load = async (v: string): Promise<any[]> => {
-    if (v[0] === '@') {
-      // load from file
-      return await loadVariablesFromFile(v.substring(1), options);
-    } else if (v[0] === '$') {
-      // load from environment variable
-      console.debug(`loading variables from env '${v.substring(1)}'`);
+  console.group('loading variables');
 
-      return [JSON.parse(stripJsonComments(process.env[v.substring(1)] || '{}'))];
+  try {
+    // load all inputs
+    let load = async (v: string): Promise<any[]> => {
+      if (v[0] === '@') {
+        // load from file
+        return await loadVariablesFromFile(v.substring(1), options);
+      } else if (v[0] === '$') {
+        // load from environment variable
+        console.debug(`loading from env '${v.substring(1)}'`);
+
+        return [JSON.parse(stripJsonComments(process.env[v.substring(1)] || '{}'))];
+      }
+
+      // return given variables
+      return [JSON.parse(stripJsonComments(v))];
+    };
+
+    // merge inputs
+    const vars: any[] = [];
+    for (const v of variables) {
+      vars.push(...(await load(v)));
     }
 
-    // return given variables
-    return [JSON.parse(stripJsonComments(v))];
-  };
+    const result = flattenAndMerge(options?.separator || Defaults.Separator, ...vars);
 
-  // merge inputs
-  const vars: any[] = [];
-  for (const v of variables) {
-    vars.push(...(await load(v)));
+    for (const key of Object.keys(result)) {
+      console.debug(`loaded '${key}'`);
+    }
+
+    const count = Object.keys(result).length;
+    console.info(`${count} variable${count > 1 ? 's' : ''} loaded`);
+
+    return result;
+  } finally {
+    console.groupEnd();
   }
-
-  return flattenAndMerge(options?.separator || Defaults.Separator, ...vars);
 }
 
-async function loadVariablesFromFile(name: string, options?: ParseVariablesOptions): Promise<any[]> {
+async function loadVariablesFromFile(name: string, options?: LoadVariablesOptions): Promise<any[]> {
   if (os.platform() === 'win32' && options?.normalizeWin32) {
     name = name.replace(/\\/g, '/');
   }
@@ -122,7 +138,7 @@ async function loadVariablesFromFile(name: string, options?: ParseVariablesOptio
 
   const vars: any[] = [];
   for (const file of files) {
-    console.debug(`loading variables from file '${normalizePath(file)}'`);
+    console.debug(`loading from file '${normalizePath(file)}'`);
 
     const extension = path.extname(file).toLowerCase();
     const content = (await readTextFile(file)).content;

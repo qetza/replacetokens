@@ -7,7 +7,7 @@ const data = path.join(__dirname, 'data/run');
 const tmp = path.join(__dirname, '_tmp/run');
 
 let replaceTokensSpy: jest.SpiedFunction<typeof rt.replaceTokens>;
-let parseVariablesSpy: jest.SpiedFunction<typeof rt.parseVariables>;
+let loadVariablesSpy: jest.SpiedFunction<typeof rt.loadVariables>;
 let consoleSpies: {
   log: jest.SpiedFunction<typeof console.log>;
   debug: jest.SpiedFunction<typeof console.debug>;
@@ -25,7 +25,7 @@ describe('run', () => {
     replaceTokensSpy = jest
       .spyOn(rt, 'replaceTokens')
       .mockResolvedValue({ defaults: 1, files: 2, replaced: 3, tokens: 3, transforms: 5 });
-    parseVariablesSpy = jest.spyOn(rt, 'parseVariables').mockResolvedValue({});
+    loadVariablesSpy = jest.spyOn(rt, 'loadVariables').mockResolvedValue({});
     consoleSpies = {
       log: jest.spyOn(console, 'log').mockImplementation(),
       debug: jest.spyOn(console, 'debug').mockImplementation(),
@@ -139,7 +139,7 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(parseVariablesSpy).toHaveBeenCalledWith(['{ "var1": "value1" }', '{ "var2": { "sub2": ["value2"] } }'], {
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{ "var1": "value1" }', '{ "var2": { "sub2": ["value2"] } }'], {
       normalizeWin32: false,
       separator: rt.Defaults.Separator
     });
@@ -156,7 +156,7 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(parseVariablesSpy).toHaveBeenCalledWith([`@${varsPath}`], {
+    expect(loadVariablesSpy).toHaveBeenCalledWith([`@${varsPath}`], {
       normalizeWin32: false,
       separator: rt.Defaults.Separator
     });
@@ -183,7 +183,7 @@ describe('run', () => {
       await run();
 
       // assert
-      expect(parseVariablesSpy).toHaveBeenCalledWith(['$REPLACETOKENS_TESTS_VARS'], {
+      expect(loadVariablesSpy).toHaveBeenCalledWith(['$REPLACETOKENS_TESTS_VARS'], {
         normalizeWin32: false,
         separator: rt.Defaults.Separator
       });
@@ -215,7 +215,7 @@ describe('run', () => {
       await run();
 
       // assert
-      expect(parseVariablesSpy).toHaveBeenCalledWith(
+      expect(loadVariablesSpy).toHaveBeenCalledWith(
         [
           '{}',
           '{ "var1": "args" } // comment',
@@ -483,7 +483,7 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(parseVariablesSpy).toHaveBeenCalledWith(['{}'], {
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{}'], {
       normalizeWin32: false,
       root: 'root',
       separator: rt.Defaults.Separator
@@ -683,7 +683,7 @@ describe('run', () => {
     await run();
 
     // assert
-    expect(parseVariablesSpy).toHaveBeenCalledWith(['{}'], { normalizeWin32: false, separator: ':' });
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{}'], { normalizeWin32: false, separator: ':' });
     expect(replaceTokensSpy).toHaveBeenCalledWith(expect.anything(), expect.any(Function), expect.anything());
   });
 
@@ -762,7 +762,7 @@ describe('run', () => {
         'debug'
       ]);
 
-      parseVariablesSpy.mockRestore();
+      loadVariablesSpy.mockRestore();
       replaceTokensSpy.mockRestore();
 
       // act
