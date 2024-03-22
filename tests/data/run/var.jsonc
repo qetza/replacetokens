@@ -2,5 +2,5 @@
  * comment
  */
 {
-  "var2": "file" // inline comment
+  "VAR2": "file" // inline comment
 }

@@ -56,7 +56,6 @@ export interface Options {
   readonly recursive?: boolean;
   readonly addBOM?: boolean;
   readonly escape?: { readonly type?: string; readonly chars?: string; readonly escapeChar?: string };
-  readonly separator?: string;
   readonly transforms?: { readonly enabled?: boolean; readonly prefix?: string; readonly suffix?: string };
 }
 
@@ -199,7 +198,7 @@ export async function readTextFile(
 
 export async function replaceTokens(
   sources: readonly string[] | string,
-  variables: { [key: string]: any },
+  getVariable: (name: string) => string | undefined,
   options?: Options
 ): Promise<Counter> {
   // set defaults
@@ -219,7 +218,6 @@ export async function replaceTokens(
       log: options?.missing?.log ?? MissingVariables.Log.Warn
     },
     recursive: options?.recursive ?? false,
-    separator: options?.separator ?? Defaults.Separator,
     token: {
       pattern: options?.token?.pattern ?? TokenPatterns.Default,
       prefix: (() => {
@@ -278,7 +276,6 @@ export async function replaceTokens(
 
   // initialize
   const counters = new Counter();
-  const vars = loadVariables(variables, options);
   const patterns = parseSources(sources);
   const tokenRegex = generateTokenRegex(options.token!.prefix!, options.token!.suffix!);
   const transformRegex = generateTransformRegex(options.transforms!.prefix!, options.transforms!.suffix!);
@@ -316,7 +313,7 @@ export async function replaceTokens(
       let c = await replaceTokensInFile(
         normalizePath(input),
         normalizePath(output),
-        vars,
+        getVariable,
         tokenRegex,
         transformRegex,
         customEscapeRegex,
@@ -332,30 +329,6 @@ export async function replaceTokens(
   }
 
   return counters;
-}
-
-function loadVariables(variables: { [key: string]: any }, options: Options): { [key: string]: string } {
-  console.group('loading variables');
-
-  try {
-    // flatten with uppercase and stringify json variables
-    const data = flatten(variables ?? {}, options.separator!);
-
-    // get variables with case-insensitive key and value
-    const vars = {};
-    for (const [key, value] of Object.entries(data)) {
-      vars[key] = value.value;
-
-      console.debug(`loaded '${value.name}'`);
-    }
-
-    const count = Object.keys(vars).length;
-    console.info(`${count} variable${count > 1 ? 's' : ''} loaded`);
-
-    return vars;
-  } finally {
-    console.groupEnd();
-  }
 }
 
 interface InputPattern {
@@ -446,7 +419,7 @@ function generateCustomEscapeRegex(chars: string): RegExp {
 async function replaceTokensInFile(
   input: string,
   output: string,
-  variables: { [key: string]: string },
+  getVariable: (name: string) => string | undefined,
   tokenRegex: RegExp,
   transformRegex: RegExp,
   customEscapeRegex: RegExp | undefined,
@@ -487,7 +460,7 @@ async function replaceTokensInFile(
         : options.escape!.type;
 
     // replace tokens
-    let result = replaceTokensInString(file.content, variables, tokenRegex, transformRegex, customEscapeRegex, {
+    let result = replaceTokensInString(file.content, getVariable, tokenRegex, transformRegex, customEscapeRegex, {
       ...options,
       escape: { ...options.escape, ...{ type: escapeType } }
     });
@@ -519,7 +492,7 @@ async function replaceTokensInFile(
 
 function replaceTokensInString(
   content: string,
-  variables: { [key: string]: string },
+  getVariable: (name: string) => string | undefined,
   tokenRegex: RegExp,
   transformRegex: RegExp,
   customEscapeRegex: RegExp | undefined,
@@ -549,7 +522,7 @@ function replaceTokensInString(
     if (options.recursive && names.includes(key)) throw new Error(`found cycle with token '${name}'`);
 
     // replace token
-    let value: string = variables[key];
+    let value = getVariable(key);
 
     if (value === undefined) {
       // variable not found
@@ -595,7 +568,7 @@ function replaceTokensInString(
       if (options.recursive) {
         let result = replaceTokensInString(
           value,
-          variables,
+          getVariable,
           tokenRegex,
           transformRegex,
           customEscapeRegex,

@@ -1,0 +1,3 @@
+windows1252
+€
+var1_value

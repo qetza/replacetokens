@@ -253,17 +253,21 @@ npm install replacetokens
 ```typescript
 import * as rt from 'replacetokens';
 
+const vars = { VAR1: "hello #{upper(var2)}#", VAR2: "world!" }; // keys must be uppercase
+
 const result = await rt.replaceTokens(
   ['settings.json'],
-  { var1: "hello #{upper(var2)}#", var2: "world!" },
+  (name: string) => vars[name],
   {
     recursive: true,
     transforms: { enable: true }
   });
 ```
 
-#### replaceTokens(string[], string [, options])
-Replaces the tokens in the `sources` files using the provided key/values in `variables`. See CLI documentation for the input files pattern.
+#### replaceTokens(string[], (string) => string | undefined [, options])
+Replaces the tokens in the `sources` files using the callback `getVariable` to retrieve the values (name will **always** be in uppercase).
+
+See CLI documentation for the input files pattern.
 
 options:
 - `addBOM` _(default: false)_: add BOM when writing files
@@ -278,7 +282,6 @@ options:
   - `log` _(default: warn)_: the key not found message log level
 - `recursive` _(default: false)_: specifies if recursive replacement is enabled
 - `root` _(default: current working directory)_:
-- `separator` _(default: )_: the separator used when flattening the keys
 - `token`: specifies the token pattern
   - `pattern` _(default: default)_: the token pattern
   - `prefix` _(default: null)_: the token prefix if `pattern` is `custom`
