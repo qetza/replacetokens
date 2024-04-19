@@ -57,6 +57,7 @@ export interface Options {
   readonly addBOM?: boolean;
   readonly escape?: { readonly type?: string; readonly chars?: string; readonly escapeChar?: string };
   readonly transforms?: { readonly enabled?: boolean; readonly prefix?: string; readonly suffix?: string };
+  readonly sources?: { readonly caseInsensitive?: boolean };
 }
 
 export class Counter {
@@ -72,6 +73,7 @@ export interface LoadVariablesOptions {
   normalizeWin32?: boolean;
   root?: string;
   dot?: boolean;
+  caseInsensitive?: boolean;
 }
 
 export async function loadVariables(
@@ -129,6 +131,7 @@ async function loadVariablesFromFile(name: string, options?: LoadVariablesOption
     name.split(';').map(v => v.trim()),
     {
       absolute: true,
+      caseSensitiveMatch: !(options?.caseInsensitive ?? false),
       cwd: options?.root,
       dot: options?.dot,
       onlyFiles: true,
@@ -181,8 +184,7 @@ function flatten(
 
   return result;
 }
-
-export async function readTextFile(
+async function readTextFile(
   path: string,
   encoding: string = Encodings.Auto
 ): Promise<{ encoding: string; content: string }> {
@@ -234,6 +236,9 @@ export async function replaceTokens(
       log: options?.missing?.log ?? MissingVariables.Log.Warn
     },
     recursive: options?.recursive ?? false,
+    sources: {
+      caseInsensitive: options?.sources?.caseInsensitive ?? false
+    },
     token: {
       pattern: options?.token?.pattern ?? TokenPatterns.Default,
       prefix: (() => {
@@ -302,6 +307,7 @@ export async function replaceTokens(
   for (const pattern of patterns) {
     var inputs = await fg.glob(pattern.inputPatterns, {
       absolute: true,
+      caseSensitiveMatch: !options.sources!.caseInsensitive,
       cwd: options.root,
       onlyFiles: true,
       unique: true

@@ -254,6 +254,13 @@ describe('run', () => {
     await run();
 
     // assert
+    expect(loadVariablesSpy).toHaveBeenCalledWith(['{}'], {
+      separator: rt.Defaults.Separator,
+      normalizeWin32: false,
+      root: undefined,
+      caseInsensitive: undefined
+    });
+
     expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), {
       root: undefined,
       encoding: 'auto',
@@ -278,6 +285,9 @@ describe('run', () => {
         enabled: undefined,
         prefix: '(',
         suffix: ')'
+      },
+      sources: {
+        caseInsensitive: undefined
       }
     });
 
@@ -729,6 +739,26 @@ describe('run', () => {
       expect.anything(),
       expect.any(Function),
       expect.objectContaining({ transforms: expect.objectContaining({ suffix: ']' }) })
+    );
+  });
+
+  it('case-insensitive-paths', async () => {
+    // arrange
+    jest.replaceProperty(process, 'argv', argv('--case-insensitive-paths'));
+
+    // act
+    await run();
+
+    // assert
+    expect(loadVariablesSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ caseInsensitive: true })
+    );
+
+    expect(replaceTokensSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Function),
+      expect.objectContaining({ sources: expect.objectContaining({ caseInsensitive: true }) })
     );
   });
 

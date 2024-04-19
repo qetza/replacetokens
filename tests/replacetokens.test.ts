@@ -257,6 +257,25 @@ describe('replaceTokens', () => {
       await expectFileToEqual(input, 'default.json');
       await expectFileToEqual(path.join(tmp, 'output/default2.json'), 'default.expected.json');
     });
+
+    it('case insensitive paths', async () => {
+      // arrange
+      const input = await copyData('default.json', 'DEFAULT1.json');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(
+        normalizeSources(path.join(tmp, '**/default1.json')),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
+        {
+          sources: { caseInsensitive: true }
+        }
+      );
+
+      // assert
+      expectCountersToEqual(result, 0, 1, 2, 2, 0);
+      await expectFileToEqual(input, 'default.expected.json');
+    });
   });
 
   describe('variables', () => {

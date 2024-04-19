@@ -17,6 +17,7 @@ npm install -g replacetokens
 replacetokens --sources
               --variables
               [--add-bom]
+              [--case-insensitive-paths]
               [--chars-to-escape]
               [--encoding]
               [--escape {auto, off, json, xml, custom}]
@@ -72,6 +73,10 @@ Example: `'@**/*.(json|yaml);!vars.local.json' '$VARS' '{ "var1": "inline", "var
 `--add-bom`
 
 Add BOM when writing files.
+
+`--case-insensitive-paths`
+
+Enable case-insensitive file path matching in glob patterns (sources and variables).
 
 `--chars-to-escape <string>`
 
@@ -270,8 +275,9 @@ Load variables from the given list of strings; keys are flatten, merged are retu
 See CLI documentation for the parsing pattern and constraints.
 
 options:
-- `dot`: allow patterns to match entries starting with a dot (`.`)
-- `normalizeWin32`: replace back-slashes (`\`) with forward-slashes (`/`) in file paths
+- `caseInsensitive` _(default: false)_: enable case-insensitive matching in file paths
+- `dot` _(default: false)_: allow patterns to match entries starting with a dot (`.`)
+- `normalizeWin32` _(default: false)_: replace back-slashes (`\`) with forward-slashes (`/`) in file paths
 - `root`: _(default: current working directory)_: root path used when reading files with relative paths
 - `separator` _(default: .)_: the separator used when flattening the keys
 
@@ -307,6 +313,8 @@ options:
   - `log` _(default: warn)_: the key not found message log level
 - `recursive` _(default: false)_: specifies if recursive replacement is enabled
 - `root` _(default: current working directory)_: root path used when reading files with relative paths
+- `sources`: specifies glob pattern options
+  - `caseInsensitive` _(default: false)_: enable case-insensitive matching in file paths
 - `token`: specifies the token pattern
   - `pattern` _(default: default)_: the token pattern
   - `prefix` _(default: null)_: the token prefix if `pattern` is `custom`
