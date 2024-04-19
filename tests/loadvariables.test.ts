@@ -234,4 +234,14 @@ describe('loadVariables', () => {
 
     expect(result).toEqual({ VAR1: 'value1', VAR2: 'file', 'VAR2.SUB2.0': 'value2', VAR3: 'file' });
   });
+
+  it('options: caseInsensitive', async () => {
+    // act
+    const result = await loadVariables(['@**/vars2.json'], { root: data, caseInsensitive: true });
+
+    // assert
+    expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, 'VARS2.json')}'`);
+
+    expect(result).toEqual({ VAR1: 'value1', 'VAR2.SUB2.0': 'value2' });
+  });
 });

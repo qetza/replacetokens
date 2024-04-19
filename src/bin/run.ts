@@ -13,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.5.0')
+    .version('1.6.0')
     .usage('$0 [args]')
     .help()
     .options({
@@ -30,6 +30,10 @@ export async function run() {
         description: 'variables values as JSON'
       },
       'add-bom': { type: 'boolean', description: 'add BOM when writing files' },
+      'case-insensitive-paths': {
+        type: 'boolean',
+        description: 'enable case-insensitive file path matching in glob patterns (sources and variables)'
+      },
       'chars-to-escape': { type: 'string', description: 'custom characters to escape' },
       encoding: {
         default: rt.Encodings.Auto,
@@ -191,7 +195,8 @@ export async function run() {
     const variables = await rt.loadVariables(argv.variables, {
       separator: argv.separator,
       normalizeWin32: false,
-      root: argv.root
+      root: argv.root,
+      caseInsensitive: argv['case-insensitive-paths']
     });
     const result = await rt.replaceTokens(argv.sources, (name: string) => variables[name], {
       root: argv.root,
@@ -220,6 +225,9 @@ export async function run() {
         enabled: argv.transforms,
         prefix: argv['transforms-prefix'],
         suffix: argv['transforms-suffix']
+      },
+      sources: {
+        caseInsensitive: argv['case-insensitive-paths']
       }
     });
 
