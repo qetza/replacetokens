@@ -45,6 +45,11 @@ export async function run() {
         description: 'value escaping'
       },
       'escape-char': { type: 'string', description: 'custom escape character' },
+      'include-dot-paths': {
+        type: 'boolean',
+        description:
+          "Include directories and files starting with a dot ('.') in glob matching results (sources and variables)."
+      },
       'log-level': {
         choice: ['debug', 'info', 'warn', 'error', 'off'],
         default: 'info',
@@ -196,7 +201,8 @@ export async function run() {
       separator: argv.separator,
       normalizeWin32: false,
       root: argv.root,
-      caseInsensitive: argv['case-insensitive-paths']
+      caseInsensitive: argv['case-insensitive-paths'],
+      dot: argv['include-dot-paths']
     });
     const result = await rt.replaceTokens(argv.sources, (name: string) => variables[name], {
       root: argv.root,
@@ -227,7 +233,8 @@ export async function run() {
         suffix: argv['transforms-suffix']
       },
       sources: {
-        caseInsensitive: argv['case-insensitive-paths']
+        caseInsensitive: argv['case-insensitive-paths'],
+        dot: argv['include-dot-paths']
       }
     });
 

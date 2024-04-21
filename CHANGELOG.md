@@ -2,6 +2,7 @@
 
 ## v1.6.0
 - Add support for case-insensitive glob pattern matching ([#13](https://github.com/qetza/replacetokens/issues/13)).
+- Add support for dot paths in glob pattern matching ([#12](https://github.com/qetza/replacetokens/issues/12)).
 - Remove `readTextFile` function.
 
 ## v1.5.0

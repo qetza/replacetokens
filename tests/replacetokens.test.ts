@@ -21,6 +21,8 @@ describe('replaceTokens', () => {
 
   async function copyData(source: string, dest: string): Promise<string> {
     dest = path.join(tmp, dest);
+
+    await fs.mkdir(path.dirname(dest), { recursive: true });
     await fs.copyFile(path.join(data, source), dest);
 
     return path.resolve(dest);
@@ -275,6 +277,27 @@ describe('replaceTokens', () => {
       // assert
       expectCountersToEqual(result, 0, 1, 2, 2, 0);
       await expectFileToEqual(input, 'default.expected.json');
+    });
+
+    it('dot paths', async () => {
+      // arrange
+      const input1 = await copyData('default.json', '.default1.json');
+      const input2 = await copyData('default.json', '.data/default1.json');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(
+        normalizeSources(path.join(tmp, '**/*.json')),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' }),
+        {
+          sources: { dot: true }
+        }
+      );
+
+      // assert
+      expectCountersToEqual(result, 0, 2, 4, 4, 0);
+      await expectFileToEqual(input1, 'default.expected.json');
+      await expectFileToEqual(input2, 'default.expected.json');
     });
   });
 

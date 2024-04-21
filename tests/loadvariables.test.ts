@@ -60,6 +60,8 @@ describe('loadVariables', () => {
     expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, 'vars.json')}'`);
     expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, 'vars.yml')}'`);
     expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, 'vars.yaml')}'`);
+    expect(consoleSpies.debug).not.toHaveBeenCalledWith(`loading from file '${path.join(data, '.vars.json')}'`);
+    expect(consoleSpies.debug).not.toHaveBeenCalledWith(`loading from file '${path.join(data, '.vars', 'var.json')}'`);
 
     expect(result).toEqual({
       VAR1: 'value1',
@@ -230,9 +232,10 @@ describe('loadVariables', () => {
     // assert
     expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, 'var.jsonc')}'`);
     expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, 'vars.json')}'`);
+    expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, '.vars.json')}'`);
     expect(consoleSpies.debug).toHaveBeenCalledWith(`loading from file '${path.join(data, '.vars', 'var.json')}'`);
 
-    expect(result).toEqual({ VAR1: 'value1', VAR2: 'file', 'VAR2.SUB2.0': 'value2', VAR3: 'file' });
+    expect(result).toEqual({ VAR1: 'value1', VAR2: 'file', 'VAR2.SUB2.0': 'value2', VAR3: 'file', VAR4: 'value4' });
   });
 
   it('options: caseInsensitive', async () => {
