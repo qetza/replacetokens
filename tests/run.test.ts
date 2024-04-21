@@ -287,7 +287,8 @@ describe('run', () => {
         suffix: ')'
       },
       sources: {
-        caseInsensitive: undefined
+        caseInsensitive: undefined,
+        dot: undefined
       }
     });
 
@@ -759,6 +760,23 @@ describe('run', () => {
       expect.anything(),
       expect.any(Function),
       expect.objectContaining({ sources: expect.objectContaining({ caseInsensitive: true }) })
+    );
+  });
+
+  it('include-dot-paths', async () => {
+    // arrange
+    jest.replaceProperty(process, 'argv', argv('--include-dot-paths'));
+
+    // act
+    await run();
+
+    // assert
+    expect(loadVariablesSpy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ dot: true }));
+
+    expect(replaceTokensSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Function),
+      expect.objectContaining({ sources: expect.objectContaining({ dot: true }) })
     );
   });
 

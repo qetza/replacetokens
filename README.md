@@ -23,6 +23,7 @@ replacetokens --sources
               [--escape {auto, off, json, xml, custom}]
               [--escape-char]
               [--help]
+              [--include-dot-paths]
               [--log-level {debug, info, warn, error, off}]
               [--missing-var-action {none, keep, replace}]
               [--missing-var-default]
@@ -76,7 +77,7 @@ Add BOM when writing files.
 
 `--case-insensitive-paths`
 
-Enable case-insensitive file path matching in glob patterns (sources and variables).
+Enable case-insensitive file path matching in glob patterns (_sources_ and _variables_).
 
 `--chars-to-escape <string>`
 
@@ -108,6 +109,10 @@ The escape character to use when using `custom` escape.
 `--help`
 
 Show help.
+
+`--include-dot-paths`
+
+Include directories and files starting with a dot (`.`) in glob matching results (_sources_ and _variables_).
 
 `--log-level <string>`
 
@@ -276,7 +281,7 @@ See CLI documentation for the parsing pattern and constraints.
 
 options:
 - `caseInsensitive` _(default: false)_: enable case-insensitive matching in file paths
-- `dot` _(default: false)_: allow patterns to match entries starting with a dot (`.`)
+- `dot` _(default: false)_: include directories and files starting with a dot (`.`) in glob matching results
 - `normalizeWin32` _(default: false)_: replace back-slashes (`\`) with forward-slashes (`/`) in file paths
 - `root`: _(default: current working directory)_: root path used when reading files with relative paths
 - `separator` _(default: .)_: the separator used when flattening the keys
@@ -315,6 +320,7 @@ options:
 - `root` _(default: current working directory)_: root path used when reading files with relative paths
 - `sources`: specifies glob pattern options
   - `caseInsensitive` _(default: false)_: enable case-insensitive matching in file paths
+  - `dot` _(default: false)_: include directories and files starting with a dot (`.`) in glob matching results
 - `token`: specifies the token pattern
   - `pattern` _(default: default)_: the token pattern
   - `prefix` _(default: null)_: the token prefix if `pattern` is `custom`

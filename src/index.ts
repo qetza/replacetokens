@@ -57,7 +57,7 @@ export interface Options {
   readonly addBOM?: boolean;
   readonly escape?: { readonly type?: string; readonly chars?: string; readonly escapeChar?: string };
   readonly transforms?: { readonly enabled?: boolean; readonly prefix?: string; readonly suffix?: string };
-  readonly sources?: { readonly caseInsensitive?: boolean };
+  readonly sources?: { readonly caseInsensitive?: boolean; readonly dot?: boolean };
 }
 
 export class Counter {
@@ -237,7 +237,8 @@ export async function replaceTokens(
     },
     recursive: options?.recursive ?? false,
     sources: {
-      caseInsensitive: options?.sources?.caseInsensitive ?? false
+      caseInsensitive: options?.sources?.caseInsensitive ?? false,
+      dot: options?.sources?.dot ?? false
     },
     token: {
       pattern: options?.token?.pattern ?? TokenPatterns.Default,
@@ -308,6 +309,7 @@ export async function replaceTokens(
     var inputs = await fg.glob(pattern.inputPatterns, {
       absolute: true,
       caseSensitiveMatch: !options.sources!.caseInsensitive,
+      dot: options.sources!.dot,
       cwd: options.root,
       onlyFiles: true,
       unique: true
