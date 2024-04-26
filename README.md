@@ -15,7 +15,6 @@ npm install -g replacetokens
 ### Usage
 ```
 replacetokens --sources
-              --variables
               [--add-bom]
               [--case-insensitive-paths]
               [--chars-to-escape]
@@ -38,6 +37,8 @@ replacetokens --sources
               [--transform]
               [--transform-prefix]
               [--transform-suffix]
+              [--use-env]
+              [--variables]
               [--version]
 ```
 
@@ -54,21 +55,6 @@ Each entry supports:
 If the output path is a relative path, it will be relative to the input file.
 
 Example: `**/*.json; !local/ => out/*.json` will match all files ending with `.json` in all directories and sub directories except in `local` directory and the output will be in a sub directory `out` relative to the input file keeping the file name.
-
-`--variables <list>`
-
-A list of strings or JSON encoded key/values (keys are **case-insensitive**).
-
-If an entry starts with:
-- `@`: value is parsed as a multiple glob patterns separated by a semi-colon (';') using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax to JSON or YAML files
-- `$`: value is parsed as an environment variable name containing JSON encoded key/value pairs
-
-Multiple entries are merged into a single list of key/value pairs.
-
-Example: `'@**/*.(json|yaml);!vars.local.json' '$VARS' '{ "var1": "inline", "var2": "inline" }'` will:
-- read and parse all files with `.json` or `.yaml` extension except `vars.local.json`
-- read and parse the environment variable `VARS`
-- parse the inline key/values `{ "var": "inline", "var2": "inline" } }`
 
 #### Optional parameters
 `--add-bom`
@@ -248,6 +234,25 @@ The tranforms prefix when using transforms. Default is `(`.
 `--transforms-suffix <string>`
 
 The tranforms suffix when using transforms. Default is `)`.
+
+`--use-env`
+
+Include environment variables as variables (names are **case-insensitive**). Parameter is **required** if `--variables` is not specified.
+
+`--variables <list>`
+
+A list of strings or JSON encoded key/values (keys are **case-insensitive**). Parameter is **required** if `--use-env` is not specified.
+
+If an entry starts with:
+- `@`: value is parsed as a multiple glob patterns separated by a semi-colon (';') using [fast-glob](https://github.com/mrmlnc/fast-glob) syntax to JSON or YAML files
+- `$`: value is parsed as an environment variable name containing JSON encoded key/value pairs
+
+Multiple entries are merged into a single list of key/value pairs.
+
+Example: `'@**/*.(json|yaml);!vars.local.json' '$VARS' '{ "var1": "inline", "var2": "inline" }'` will:
+- read and parse all files with `.json` or `.yaml` extension except `vars.local.json`
+- read and parse the environment variable `VARS`
+- parse the inline key/values `{ "var": "inline", "var2": "inline" } }`
 
 `--version`
 

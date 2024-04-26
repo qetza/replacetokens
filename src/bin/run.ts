@@ -13,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.6.0')
+    .version('1.7.0')
     .usage('$0 [args]')
     .help()
     .options({
@@ -22,12 +22,6 @@ export async function run() {
         array: true,
         demandOption: true,
         description: 'semi-colon separated glob patterns (fast-glob syntax) for input files'
-      },
-      variables: {
-        type: 'string',
-        array: true,
-        demandOption: true,
-        description: 'variables values as JSON'
       },
       'add-bom': { type: 'boolean', description: 'add BOM when writing files' },
       'case-insensitive-paths': {
@@ -102,14 +96,22 @@ export async function run() {
         type: 'string',
         default: rt.Defaults.TransformSuffix,
         description: 'transform suffix'
+      },
+      'use-env': { type: 'boolean', description: 'Include environment variables as variables' },
+      variables: {
+        type: 'string',
+        array: true,
+        description: 'variables values as JSON'
       }
     })
     .check((argv, _) => {
       if (argv['token-pattern'] === rt.TokenPatterns.Custom && (!argv['token-prefix'] || !argv['token-suffix']))
-        throw new Error('token-prefix and token-suffix are mandatory with custom token-pattern');
+        throw new Error('token-prefix and token-suffix are required with custom token-pattern');
 
       if (argv.escape === rt.Escapes.Custom && (!argv['escape-char'] || !argv['chars-to-escape']))
-        throw new Error('escape-char and chars-to-escape are mandatory with custom escape');
+        throw new Error('escape-char and chars-to-escape are required with custom escape');
+
+      if (!argv['use-env'] && !argv.variables) throw new Error('at least one of use-env or variables is required');
 
       return true;
     })
@@ -197,13 +199,24 @@ export async function run() {
 
   try {
     // replace tokens
-    const variables = await rt.loadVariables(argv.variables, {
-      separator: argv.separator,
-      normalizeWin32: false,
-      root: argv.root,
-      caseInsensitive: argv['case-insensitive-paths'],
-      dot: argv['include-dot-paths']
-    });
+    let variables = {};
+    if (argv['use-env']) {
+      for (const [key, value] of Object.entries(process.env)) variables[key.toUpperCase()] = value;
+    }
+
+    if (argv.variables) {
+      variables = {
+        ...variables,
+        ...(await rt.loadVariables(argv.variables, {
+          separator: argv.separator,
+          normalizeWin32: false,
+          root: argv.root,
+          caseInsensitive: argv['case-insensitive-paths'],
+          dot: argv['include-dot-paths']
+        }))
+      };
+    }
+
     const result = await rt.replaceTokens(argv.sources, (name: string) => variables[name], {
       root: argv.root,
       encoding: argv.encoding,

@@ -67,7 +67,7 @@ describe('run', () => {
     );
   });
 
-  it('mandatory arguments', async () => {
+  it('required arguments', async () => {
     // arrange
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(code => {
       throw `exit: ${code}`;
@@ -84,7 +84,7 @@ describe('run', () => {
 
     // assert
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(consoleSpies.error).toHaveBeenCalledWith('Missing required arguments: sources, variables');
+    expect(consoleSpies.error).toHaveBeenCalledWith('Missing required argument: sources');
   });
 
   it('output', async () => {
@@ -121,6 +121,26 @@ describe('run', () => {
       expect.any(Function),
       expect.anything()
     );
+  });
+
+  it('use-env or variables required', async () => {
+    // arrange
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(code => {
+      throw `exit: ${code}`;
+    });
+
+    jest.replaceProperty(process, 'argv', ['node', 'index.js', '--sources', 'file1']);
+
+    // act
+    try {
+      await run();
+    } catch (e) {
+      expect(e).toEqual('exit: 1'); // catch for process.exit mock
+    }
+
+    // assert
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(consoleSpies.error).toHaveBeenCalledWith('at least one of use-env or variables is required');
   });
 
   it('argument variables', async () => {
@@ -230,6 +250,74 @@ describe('run', () => {
       expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
     } finally {
       delete process.env.REPLACETOKENS_TESTS_VARS;
+    }
+  });
+
+  it('use-env', async () => {
+    // arrange
+    process.env.replacetokens_tests_var = 'env_value';
+
+    try {
+      jest.replaceProperty(process, 'argv', ['node', 'index.js', '--sources', 'file1', '--use-env']);
+
+      let value: string | undefined;
+      replaceTokensSpy.mockImplementation((sources, getVariables, options) => {
+        value = getVariables('REPLACETOKENS_TESTS_VAR');
+
+        return Promise.resolve({ defaults: 1, files: 2, replaced: 3, tokens: 4, transforms: 5 });
+      });
+
+      // act
+      await run();
+
+      // assert
+      expect(loadVariablesSpy).not.toHaveBeenCalled();
+      expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
+      expect(value).toBe(process.env.replacetokens_tests_var);
+    } finally {
+      delete process.env.replacetokens_tests_var;
+    }
+  });
+
+  it('use-env: variable override', async () => {
+    // arrange
+    process.env.replacetokens_tests_var1 = 'env_value';
+    process.env.replacetokens_tests_var2 = 'env_value';
+
+    let vars = { replacetokens_tests_var1: 'var_value' };
+
+    try {
+      jest.replaceProperty(process, 'argv', [
+        'node',
+        'index.js',
+        '--sources',
+        'file1',
+        '--use-env',
+        '--variables',
+        JSON.stringify(vars)
+      ]);
+
+      loadVariablesSpy.mockResolvedValue({ REPLACETOKENS_TESTS_VAR1: vars.replacetokens_tests_var1 });
+
+      let value1: string | undefined;
+      let value2: string | undefined;
+      replaceTokensSpy.mockImplementation((sources, getVariables, options) => {
+        value1 = getVariables('REPLACETOKENS_TESTS_VAR1');
+        value2 = getVariables('REPLACETOKENS_TESTS_VAR2');
+
+        return Promise.resolve({ defaults: 1, files: 2, replaced: 3, tokens: 4, transforms: 5 });
+      });
+
+      // act
+      await run();
+
+      // assert
+      expect(loadVariablesSpy).toHaveBeenCalledWith([JSON.stringify(vars)], expect.anything());
+      expect(replaceTokensSpy).toHaveBeenCalledWith(['file1'], expect.any(Function), expect.anything());
+      expect(value1).toBe(vars.replacetokens_tests_var1);
+      expect(value2).toBe(process.env.replacetokens_tests_var2);
+    } finally {
+      delete process.env.replacetokens_tests_var;
     }
   });
 
