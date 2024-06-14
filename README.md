@@ -24,7 +24,7 @@ replacetokens --sources
               [--help]
               [--include-dot-paths]
               [--log-level {debug, info, warn, error, off}]
-              [--missing-var-action {none, keep, replace}]
+              [--missing-var-action {none, keep, replace, error}]
               [--missing-var-default]
               [--missing-var-log {off, warn, error}]
               [--no-log-color]
@@ -114,6 +114,7 @@ Accepted values:
 - `none`: replace with empty string **and** log key not found
 - `keep`: leave token **and** log key not found
 - `replace`: replace with _missing-var-default_
+- `error`: throw error if key not found
 
 `--missing-var-default <string>`
 

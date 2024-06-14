@@ -31,6 +31,7 @@ export class MissingVariables {
     static readonly None: string = 'none';
     static readonly Keep: string = 'keep';
     static readonly Replace: string = 'replace';
+    static readonly Error: string = 'error';
   };
 }
 
@@ -578,6 +579,9 @@ function replaceTokensInString(
           ++counters.defaults;
           ++counters.replaced;
           break;
+
+        case MissingVariables.Action.Error:
+          throw new Error(`missing variable value for '${name}'`);
 
         default:
           logVariableNotFound();
