@@ -258,6 +258,14 @@ Example: `'@**/*.(json|yaml);!vars.local.json' '$VARS' '{ "var1": "inline", "var
 
 Show version number.
 
+### Exit codes
+The replacetokens CLI returns an exit code to indicate whether it succeeded or not.
+
+| Exit code | Description |
+|-|-|
+| `0` | Completed successfully. |
+| `1` | At least on error appended. |
+
 ## API
 Install replace tokens as a module:
 ```
