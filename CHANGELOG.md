@@ -1,4 +1,6 @@
 # Changelog
+## v1.8.0
+- Add exit code to CLI in case of error.
 
 ## v1.7.0
 - Add CLI paramerter `--use-env` to automatically load environment variables as variables ([#17](https://github.com/qetza/replacetokens/issues/17)).

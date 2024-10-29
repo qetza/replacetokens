@@ -919,4 +919,106 @@ describe('run', () => {
       await fs.rm(tmp, { force: true, recursive: true });
     }
   });
+
+  it('exit code: success', async () => {
+    // arrange
+    const exitCode = process.exitCode;
+
+    await fs.mkdir(tmp, { recursive: true });
+
+    process.env.REPLACETOKENS_TESTS_VARS = '{ "var3": "env" }';
+
+    try {
+      process.exitCode = 0;
+
+      let input = path.join(tmp, 'file.txt');
+      await fs.copyFile(path.join(data, 'file.txt'), input);
+
+      input = path.resolve(input);
+
+      jest.replaceProperty(process, 'argv', [
+        'node',
+        'index.js',
+        '--sources',
+        input.replace(/\\/g, '/'),
+        '--variables',
+        '{ "var1": "args" } // comment',
+        '@**/vars.(json|yml|yaml)',
+        '@**/var.jsonc',
+        '$REPLACETOKENS_TESTS_VARS',
+        '["array", { "var4": "array" }]',
+        '{ "VAR_YML2": "inline", "var_yaml1": "inline" }',
+        '--root',
+        data,
+        '--log-level',
+        'debug'
+      ]);
+
+      loadVariablesSpy.mockRestore();
+      replaceTokensSpy.mockRestore();
+
+      // act
+      await run();
+
+      // assert
+      expect(process.exitCode).toEqual(0);
+    } finally {
+      process.exitCode = exitCode;
+
+      delete process.env.REPLACETOKENS_TESTS_VARS;
+
+      await fs.rm(tmp, { force: true, recursive: true });
+    }
+  });
+
+  it('exit code: failure', async () => {
+    // arrange
+    const exitCode = process.exitCode;
+
+    await fs.mkdir(tmp, { recursive: true });
+
+    try {
+      process.exitCode = 0;
+
+      let input = path.join(tmp, 'file.txt');
+      await fs.copyFile(path.join(data, 'file.txt'), input);
+
+      input = path.resolve(input);
+
+      jest.replaceProperty(process, 'argv', [
+        'node',
+        'index.js',
+        '--sources',
+        input.replace(/\\/g, '/'),
+        '--variables',
+        '{ "var1": "args" } // comment',
+        '@**/vars.(json|yml|yaml)',
+        '@**/var.jsonc',
+        '$REPLACETOKENS_TESTS_VARS',
+        '["array", { "var4": "array" }]',
+        '{ "VAR_YML2": "inline", "var_yaml1": "inline" }',
+        '--root',
+        data,
+        '--log-level',
+        'off',
+        '--missing-var-log',
+        'error'
+      ]);
+
+      loadVariablesSpy.mockRestore();
+      replaceTokensSpy.mockRestore();
+
+      // act
+      await run();
+
+      // assert
+      expect(process.exitCode).toEqual(1);
+    } finally {
+      process.exitCode = exitCode;
+
+      delete process.env.REPLACETOKENS_TESTS_VARS;
+
+      await fs.rm(tmp, { force: true, recursive: true });
+    }
+  });
 });

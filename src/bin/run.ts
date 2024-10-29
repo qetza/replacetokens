@@ -13,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.7.0')
+    .version('1.8.0')
     .usage('$0 [args]')
     .help()
     .options({
@@ -168,6 +168,8 @@ export async function run() {
     _warn.apply(null, args);
   };
   console.error = function (...args) {
+    process.exitCode = 1; // mark process failed on any error log attempt, don't stop execution
+
     if (logLevel > LogLevels.Error) return;
 
     if (logColor) {
