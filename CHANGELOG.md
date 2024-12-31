@@ -1,4 +1,7 @@
 # Changelog
+## v1.8.1
+- Fix leading and trailing spaces in source patterns ([#22](https://github.com/qetza/replacetokens/issues/22)).
+
 ## v1.8.0
 - Add exit code to CLI in case of error.
 

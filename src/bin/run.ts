@@ -13,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.8.0')
+    .version('1.8.1')
     .usage('$0 [args]')
     .help()
     .options({
