@@ -367,10 +367,10 @@ function parseSources(sources: readonly string[]): readonly InputPattern[] {
   let patterns: InputPattern[] = [];
 
   sources.forEach(source => {
-    const parts = source.split('=>');
+    const parts = source.split('=>').map(i => i.trim());
     const pattern: InputPattern = {
       inputHasWildcard: false,
-      inputPatterns: parts[0].trim().split(';'),
+      inputPatterns: parts[0].split(';').map(i => i.trim()),
       isOutputRelative: false,
       outputPattern: undefined
     };
@@ -379,7 +379,7 @@ function parseSources(sources: readonly string[]): readonly InputPattern[] {
 
     if (parts.length > 1) {
       // source has output
-      pattern.outputPattern = normalizePath(parts[1].trim());
+      pattern.outputPattern = normalizePath(parts[1]);
       pattern.isOutputRelative = !path.isAbsolute(pattern.outputPattern);
     }
 

@@ -126,6 +126,22 @@ describe('replaceTokens', () => {
       await expectFileToEqual(input, 'default.expected.json');
     });
 
+    it('input path with leading and trailing spaces', async () => {
+      // arrange
+      const input = await copyData('default.json', 'default1.json');
+      spyOnConsole();
+
+      // act
+      const result = await replaceTokens(
+        normalizeSources(` ${input} `),
+        getVariableCallback({ var1: 'var1_value', var2: 'var2_value' })
+      );
+
+      // assert
+      expectCountersToEqual(result, 0, 1, 2, 2, 0);
+      await expectFileToEqual(input, 'default.expected.json');
+    });
+
     it('input path with wildcard', async () => {
       // arrange
       const input1 = await copyData('default.json', 'default1.json');
@@ -155,7 +171,7 @@ describe('replaceTokens', () => {
 
       // act
       const result = await replaceTokens(
-        normalizeSources(`${path.join(tmp, '*.json')};!${input2}`),
+        normalizeSources(` ${path.join(tmp, '*.json')} ; !${input2} `),
         getVariableCallback({
           var1: 'var1_value',
           var2: 'var2_value'
