@@ -1,4 +1,7 @@
 # Changelog
+## v1.9.0
+- Add support for log level `info` for parameter `--missing-var-log` ([#24](https://github.com/qetza/replacetokens/issues/24)).
+
 ## v1.8.1
 - Fix leading and trailing spaces in source patterns ([#22](https://github.com/qetza/replacetokens/issues/22)).
 

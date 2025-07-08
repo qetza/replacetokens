@@ -13,7 +13,7 @@ export async function run() {
   // parse arguments
   var argv = await yargs(process.argv.slice(2))
     .scriptName('replacetokens')
-    .version('1.8.1')
+    .version('1.9.0')
     .usage('$0 [args]')
     .help()
     .options({
@@ -56,7 +56,7 @@ export async function run() {
       },
       'missing-var-default': { type: 'string', description: 'default value when variable is not found' },
       'missing-var-log': {
-        choices: [rt.MissingVariables.Log.Off, rt.MissingVariables.Log.Warn, rt.MissingVariables.Log.Error],
+        choices: [rt.MissingVariables.Log.Off, rt.MissingVariables.Log.Info, rt.MissingVariables.Log.Warn, rt.MissingVariables.Log.Error],
         default: rt.MissingVariables.Log.Warn,
         description: 'log level when variable is not found'
       },

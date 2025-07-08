@@ -26,7 +26,7 @@ replacetokens --sources
               [--log-level {debug, info, warn, error, off}]
               [--missing-var-action {none, keep, replace}]
               [--missing-var-default]
-              [--missing-var-log {off, warn, error}]
+              [--missing-var-log {off, info, warn, error}]
               [--no-log-color]
               [--recursive]
               [--root]
@@ -123,7 +123,7 @@ The default value to use when a key is not found. Default is empty string;
 
 The level to log the key not found message. Default is `warn`.
 
-Accepted values: `warn`, `error`, `off`
+Accepted values: `info`, `warn`, `error`, `off`
 
 `--no-log-color`
 
