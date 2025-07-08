@@ -24,6 +24,7 @@ export class TokenPatterns {
 export class MissingVariables {
   static Log = class {
     static readonly Off: string = 'off';
+    static readonly Info: string = 'info';
     static readonly Warn: string = 'warn';
     static readonly Error: string = 'error';
   };
@@ -560,6 +561,10 @@ function replaceTokensInString(
             case MissingVariables.Log.Warn:
               return (m: string) => {
                 console.warn(m);
+              };
+            case MissingVariables.Log.Info:
+              return (m: string) => {
+                console.info(m);
               };
             default:
               return (m: string) => {};

@@ -531,6 +531,22 @@ describe('replaceTokens', () => {
       expect(consoleSpies.warn).not.toHaveBeenCalledWith("variable 'var1' not found");
     });
 
+    it('info', async () => {
+      // arrange
+      const input = await copyData('default.json', 'default1.json');
+      const consoleSpies = spyOnConsole();
+
+      // act
+      const result = await replaceTokens(normalizeSources(input), getVariableCallback({}), {
+        missing: { log: MissingVariables.Log.Info }
+      });
+
+      // assert
+      expectCountersToEqual(result, 0, 1, 2, 2, 0);
+      await expectFileToEqual(input, 'default.expected.empty.json');
+      expect(consoleSpies.info).toHaveBeenCalledWith("variable 'var1' not found");
+    });
+
     it('warn', async () => {
       // arrange
       const input = await copyData('default.json', 'default1.json');
